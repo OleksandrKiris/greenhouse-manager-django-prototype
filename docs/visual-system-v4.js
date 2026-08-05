@@ -160,6 +160,23 @@
     });
   }
 
+  function decorateContextBar() {
+    const bar = context.app.querySelector(".operations-context");
+    if (!bar) return;
+    setIcon(bar.querySelector(".context-title > i"), "calendar-clock");
+    setIcon(bar.querySelector(".context-saved > i"), "circle-check-big");
+
+    const search = bar.querySelector(".context-search");
+    if (search && !search.querySelector(":scope > .v4-context-search-icon")) {
+      search.querySelector(":scope > input")?.insertAdjacentHTML("beforebegin", `<i class="v4-context-search-icon">${icon("search")}</i>`);
+    }
+
+    const schedule = bar.querySelector(".context-schedule > summary");
+    if (schedule) schedule.innerHTML = `${icon("calendar-clock")}<span>Zmień datę lub zmianę</span>`;
+    const filters = bar.querySelector(".ux-filter-menu > summary");
+    if (filters) filters.innerHTML = `${icon("sliders-horizontal")}<span>Filtry</span>`;
+  }
+
   function labelResponsiveRows() {
     const attendanceLabels = ["Pracownik", "Status", "Start", "Koniec", "Przerwa", "Notatka"];
     context.app.querySelectorAll(".table .tr:not(.head)").forEach((row) => {
@@ -232,6 +249,7 @@
     if (!context.state.loggedIn) return;
     decorateNavigation();
     decorateTopbar();
+    decorateContextBar();
     decorateContentIcons();
     labelResponsiveRows();
     enhanceMapSheet();

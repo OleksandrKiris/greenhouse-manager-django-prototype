@@ -345,3 +345,14 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn('"visual-system-v4.css"', worker)
         self.assertIn('"visual-system-v4.js"', worker)
         self.assertTrue((static_dir / "lucide-sprite.svg").exists())
+
+    def test_work_context_is_compact_without_repeating_date_and_shift(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        styles = (static_dir / "visual-system-v4.css").read_text(encoding="utf-8")
+        visual_script = (static_dir / "visual-system-v4.js").read_text(encoding="utf-8")
+        for marker in ["contextDateLabel", "context-summary", "context-schedule", "context-controls", "Zapisano", "Szukaj w tym widoku"]:
+            self.assertIn(marker, enhancements)
+        for marker in [".context-summary", ".context-schedule", ".context-controls", ".v4-context-search-icon"]:
+            self.assertIn(marker, styles)
+        self.assertIn("decorateContextBar", visual_script)

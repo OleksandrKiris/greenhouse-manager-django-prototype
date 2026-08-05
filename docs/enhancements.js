@@ -200,19 +200,38 @@
     return `<div class="upgrade-segments" role="group" aria-label="${escapeHtml(name)}">${values.map((value) => `<button class="${value === selected ? "active" : ""}" data-module-action="set-filter" data-filter-name="${name}" data-value="${escapeHtml(value)}">${escapeHtml(value)}</button>`).join("")}</div>`;
   }
 
+  function contextDateLabel(value) {
+    const date = new Date(`${value}T12:00:00`);
+    if (Number.isNaN(date.getTime())) return value;
+    const today = new Date();
+    const isToday = date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
+    const formatted = new Intl.DateTimeFormat("pl-PL", { weekday: "long", day: "numeric", month: "long" }).format(date);
+    return `${isToday ? "Dzisiaj" : "Plan na"} · ${formatted}`;
+  }
+
   function contextBar() {
     const { state, companySites } = context;
     const manager = state.role === "Kierownik";
+    const [shiftName, shiftHours = ""] = featureState.shift.split(" · ");
     const scopeControl = manager
-      ? `<label><span>Zakres</span><select data-module-change="scope"><option ${featureState.scope === "Wszystkie obiekty" ? "selected" : ""}>Wszystkie obiekty</option>${companySites.map((site) => `<option ${featureState.scope === site ? "selected" : ""}>${site}</option>`).join("")}</select></label>`
-      : `<div class="context-fixed"><span>Zakres</span><b>${state.role === "Brygadzista" ? state.selectedSite : `Rola: ${state.role}`}</b></div>`;
+      ? `<label class="context-scope"><span>Obiekt</span><select data-module-change="scope"><option ${featureState.scope === "Wszystkie obiekty" ? "selected" : ""}>Wszystkie obiekty</option>${companySites.map((site) => `<option ${featureState.scope === site ? "selected" : ""}>${site}</option>`).join("")}</select></label>`
+      : `<div class="context-fixed context-scope"><span>Obiekt</span><b>${state.role === "Brygadzista" ? state.selectedSite : `Zakres: ${state.role}`}</b></div>`;
     return `<section class="operations-context surface" aria-label="Kontekst operacyjny">
-      <div class="context-title"><i></i><span><small>KONTEKST PRACY</small><b>${featureState.shift}</b></span></div>
-      <label><span>Data planu</span><input type="date" value="${featureState.workDate}" data-module-change="work-date"></label>
-      <label><span>Zmiana</span><select data-module-change="shift"><option ${featureState.shift.startsWith("Poranna") ? "selected" : ""}>Poranna · 06:00–14:00</option><option ${featureState.shift.startsWith("Popołudniowa") ? "selected" : ""}>Popołudniowa · 14:00–22:00</option><option ${featureState.shift.startsWith("Nocna") ? "selected" : ""}>Nocna · 22:00–06:00</option></select></label>
-      ${scopeControl}
-      <label class="context-search"><span>Szukaj na ekranie</span><input type="search" value="${escapeHtml(featureState.search)}" placeholder="osoba, zadanie, nawa…" data-module-search><small class="context-search-count"></small></label>
-      <div class="context-saved"><i>✓</i><span><small>OSTATNI ZAPIS</small><b>przed chwilą</b></span></div>
+      <header class="context-summary">
+        <div class="context-title"><i></i><span><small>${contextDateLabel(featureState.workDate)}</small><b>${escapeHtml(shiftName)} <em>${escapeHtml(shiftHours)}</em></b></span></div>
+        <details class="context-schedule">
+          <summary>Zmień datę lub zmianę</summary>
+          <div>
+            <label><span>Data planu</span><input type="date" value="${featureState.workDate}" data-module-change="work-date"></label>
+            <label><span>Zmiana</span><select data-module-change="shift"><option ${featureState.shift.startsWith("Poranna") ? "selected" : ""}>Poranna · 06:00–14:00</option><option ${featureState.shift.startsWith("Popołudniowa") ? "selected" : ""}>Popołudniowa · 14:00–22:00</option><option ${featureState.shift.startsWith("Nocna") ? "selected" : ""}>Nocna · 22:00–06:00</option></select></label>
+          </div>
+        </details>
+        <div class="context-saved"><i>✓</i><span><b>Zapisano</b><small>przed chwilą</small></span></div>
+      </header>
+      <div class="context-controls">
+        ${scopeControl}
+        <label class="context-search"><span>Szukaj w tym widoku</span><input type="search" value="${escapeHtml(featureState.search)}" placeholder="Osoba, zadanie lub nawa…" data-module-search><small class="context-search-count"></small></label>
+      </div>
     </section>`;
   }
 
