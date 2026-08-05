@@ -397,7 +397,11 @@
     });
   }
 
-  function render() { app.innerHTML = state.loggedIn ? renderApp() : renderLogin(); applyBrandLogo(); }
+  function render() {
+    app.innerHTML = state.loggedIn ? renderApp() : renderLogin();
+    applyBrandLogo();
+    window.GreenhouseEnhancements?.afterRender({ app, state, render, notify, navigate, exportJson, addTicketEvent, companySites, greenhouseSites });
+  }
 
   app.addEventListener("click", (event) => {
     const nav = event.target.closest("[data-nav]");

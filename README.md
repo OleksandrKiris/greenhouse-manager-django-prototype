@@ -10,6 +10,7 @@ Publiczna makieta aplikacji zastępującej zeszyty brygadzistów w szklarni. Rep
 
 - logowanie i wybór roli,
 - firmowe logo oraz odświeżony, responsywny system wizualny dla komputerów, tabletów i telefonów,
+- wspólny kontekst daty, zmiany, obiektu i wyszukiwania oraz modułowe centra decyzji z filtrami i szybkimi akcjami,
 - panel zmiany dla brygadzisty i kierownika,
 - plan kierownika przekazywany do realizacji głównym i odpowiedzialnym brygadzistom,
 - osobny plan dla każdej szklarni i obiektu pomocniczego: dodawanie, edycja, duplikowanie, priorytet, norma, obsada, instrukcja oraz niezależny status roboczy/opublikowany,

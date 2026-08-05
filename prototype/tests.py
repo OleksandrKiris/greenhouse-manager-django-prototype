@@ -32,6 +32,8 @@ class PrototypePageTests(SimpleTestCase):
         self.assertContains(response, "/static/prototype/styles.css")
         self.assertContains(response, "/static/prototype/planning.css")
         self.assertContains(response, "/static/prototype/visual-refresh.css")
+        self.assertContains(response, "/static/prototype/enhancements.css")
+        self.assertContains(response, "/static/prototype/enhancements.js")
         self.assertContains(response, "/static/prototype/brand-logo.svg")
         self.assertContains(response, "/static/prototype/app.js")
 
@@ -45,6 +47,39 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn(".brand-logo", visual_styles)
         self.assertIn(".login-card", visual_styles)
         self.assertIn("<svg", logo)
+
+    def test_every_module_has_new_operational_features(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        styles = (static_dir / "enhancements.css").read_text(encoding="utf-8")
+        for module in [
+            "dashboardPanel",
+            "planningPanel",
+            "attendancePanel",
+            "tasksPanel",
+            "productivityPanel",
+            "teamPanel",
+            "cropPanel",
+            "ticketsPanel",
+            "materialsPanel",
+            "reportsPanel",
+        ]:
+            self.assertIn(f"function {module}", enhancements)
+        for action in [
+            "copy-plan",
+            "balance-plan",
+            "attendance-reminder",
+            "advance-tasks",
+            "download-productivity",
+            "create-protection-task",
+            "assign-ticket-queue",
+            "create-material-orders",
+            "approve-report",
+        ]:
+            self.assertIn(action, enhancements)
+        self.assertIn("operations-context", styles)
+        self.assertIn("module-upgrade", styles)
+        self.assertIn("@media (max-width: 900px)", styles)
 
     def test_work_completion_tracks_people_location_and_carts(self):
         script = (Path(__file__).parent / "static" / "prototype" / "app.js").read_text(encoding="utf-8")

@@ -9,11 +9,13 @@
   <link rel="stylesheet" href="{% static 'prototype/styles.css' %}">
   <link rel="stylesheet" href="{% static 'prototype/planning.css' %}">
   <link rel="stylesheet" href="{% static 'prototype/visual-refresh.css' %}">
+  <link rel="stylesheet" href="{% static 'prototype/enhancements.css' %}">
   <link rel="icon" href="{% static 'prototype/brand-logo.svg' %}" type="image/svg+xml">
 </head>
 <body>
   <div id="prototype-app" data-initial-screen="{{ initial_screen }}" data-assets-prefix="{% static 'prototype/' %}"></div>
   <noscript>Do obsługi klikalnej makiety potrzebny jest JavaScript.</noscript>
+  <script src="{% static 'prototype/enhancements.js' %}"></script>
   <script src="{% static 'prototype/app.js' %}"></script>
 </body>
 </html>
