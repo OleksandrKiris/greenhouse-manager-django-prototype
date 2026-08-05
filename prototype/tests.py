@@ -210,3 +210,15 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn("function simplifyDashboard()", enhancements)
         self.assertIn("hydra-action-grid", styles)
         self.assertIn("System wizualny inspirowany CITRONEX Hydra", styles)
+
+    def test_attendance_is_compact_and_first_break_has_fifteen_paid_minutes(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        script = (static_dir / "app.js").read_text(encoding="utf-8")
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        styles = (static_dir / "enhancements.css").read_text(encoding="utf-8")
+        self.assertIn("paidFirstBreakMinutes", script)
+        self.assertIn("function breakAccounting(employee)", enhancements)
+        self.assertIn('details class="time-worker-card', enhancements)
+        self.assertIn("pierwsze 15 minut pierwszej przerwy", enhancements)
+        self.assertIn(".time-worker-card > summary", styles)
+        self.assertIn(".time-worker-details", styles)

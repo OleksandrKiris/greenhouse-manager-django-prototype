@@ -189,10 +189,12 @@
     const start = timeMinutes(employee.start);
     let end = timeMinutes(employee.end);
     if (end < start) end += 24 * 60;
-    const breakMinutes = Array.isArray(employee.breaks)
-      ? employee.breaks.reduce((sum, item) => sum + Number(item.minutes || 0), 0)
+    const breaks = Array.isArray(employee.breaks) ? employee.breaks : [];
+    const totalBreakMinutes = breaks.length
+      ? breaks.reduce((sum, item) => sum + Number(item.minutes || 0), 0)
       : Number(employee.breakMinutes || 0);
-    return Math.max(0, end - start - breakMinutes);
+    const paidFirstBreakMinutes = breaks.length ? Math.min(15, Number(breaks[0].minutes || 0)) : Math.min(15, totalBreakMinutes);
+    return Math.max(0, end - start - Math.max(0, totalBreakMinutes - paidFirstBreakMinutes));
   }
   function totalWorkedHours() {
     return state.employees.reduce((sum, employee) => sum + employeeWorkedMinutes(employee), 0) / 60;

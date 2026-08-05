@@ -19,6 +19,7 @@
     materialOrderCreated: false,
     reportApproved: false,
     scheduleSaved: false,
+    expandedTimeCards: [],
   };
 
   const designState = loadDesignState();
@@ -115,8 +116,14 @@
     let end = minutesFromTime(employee.end);
     if (!start && !end) return 0;
     if (end < start) end += 24 * 60;
-    const breaks = (employee.breaks || []).reduce((sum, item) => sum + Number(item.minutes || 0), 0);
-    return Math.max(0, end - start - breaks);
+    return Math.max(0, end - start - breakAccounting(employee).deducted);
+  }
+
+  function breakAccounting(employee) {
+    const breaks = employee.breaks || [];
+    const total = breaks.reduce((sum, item) => sum + Number(item.minutes || 0), 0);
+    const paid = breaks.length ? Math.min(15, Number(breaks[0].minutes || 0)) : 0;
+    return { total, paid, deducted: Math.max(0, total - paid) };
   }
 
   function formatMinutes(minutes) {
@@ -354,10 +361,10 @@
     const unsettled = state.employees.filter((employee) => employee.status === "Nieustalony").length;
     const absent = state.employees.length - present - unsettled;
     const netMinutes = state.employees.reduce((sum, employee) => sum + employeeNetMinutes(employee), 0);
-    const doubleBreaks = state.employees.filter((employee) => employee.status === "Obecny" && employee.breaks?.length === 2).length;
+    const paidBreakMinutes = state.employees.reduce((sum, employee) => sum + (employee.status === "Obecny" ? breakAccounting(employee).paid : 0), 0);
     return `<section class="module-upgrade attendance-upgrade">
-      <div class="upgrade-head"><div><span class="kicker">ELASTYCZNY CZAS PRACY</span><h2>Każda osoba może mieć inny czas i przerwy</h2><p>Start, koniec oraz jedna lub dwie przerwy są zapisywane indywidualnie. System automatycznie liczy czas netto.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="attendance-reminder">Przypomnij o potwierdzeniu</button><button class="primary" data-module-action="quick-nav" data-target="${nextTarget}">${nextLabel}</button></div></div>
-      <div class="upgrade-metrics">${metric("Obecni", present, `z ${state.employees.length} pokazanych`)}${metric("Czas netto", `${Math.floor(netMinutes / 60)} h ${netMinutes % 60} min`, "suma bieżącego podglądu", "blue")}${metric("Dwie przerwy", doubleBreaks, "indywidualne harmonogramy")}${metric("Nieustaleni", unsettled, unsettled ? "wymagają decyzji" : "statusy kompletne", unsettled ? "amber" : "green")}</div>
+      <div class="upgrade-head"><div><span class="kicker">ELASTYCZNY CZAS PRACY</span><h2>Kompaktowa lista godzin i przerw</h2><p>Kliknij pracownika, aby rozwinąć szczegóły. Pierwsze 15 minut pierwszej przerwy jest płatne i pozostaje w czasie pracy.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="attendance-reminder">Przypomnij o potwierdzeniu</button><button class="primary" data-module-action="quick-nav" data-target="${nextTarget}">${nextLabel}</button></div></div>
+      <div class="upgrade-metrics">${metric("Obecni", present, `z ${state.employees.length} pokazanych`)}${metric("Czas netto", `${Math.floor(netMinutes / 60)} h ${netMinutes % 60} min`, "z uwzględnieniem płatnej przerwy", "blue")}${metric("Płatne przerwy", `${paidBreakMinutes} min`, "do 15 min pierwszej przerwy")}${metric("Nieustaleni", unsettled, unsettled ? "wymagają decyzji" : "statusy kompletne", unsettled ? "amber" : "green")}</div>
       <div class="filter-row"><span>Filtr listy</span>${segmented("attendance", ["Wszyscy", "Obecni", "Nieustaleni", "Nieobecni"], featureState.attendanceFilter)}<small class="filter-result">${featureState.scheduleSaved ? "✓ harmonogram zapisany" : featureState.reminderSent ? "✓ przypomnienie zapisane" : `${absent} nieobecnych`}</small></div>
     </section>`;
   }
@@ -501,20 +508,24 @@
     const legacy = Array.from(context.app.querySelectorAll(".content > section.surface")).find((section) => section.querySelector(".table .tr.head"));
     if (!legacy) return;
     legacy.className = "time-roster-shell surface";
-    legacy.innerHTML = `<header class="time-roster-head"><div><span class="kicker">HARMONOGRAM INDYWIDUALNY</span><h3>Czas pracy i przerwy</h3><p>Każdy wpis może mieć inny start, koniec, liczbę przerw oraz ich długość.</p></div><div class="time-legend"><span><i class="green"></i>czas netto</span><span><i class="amber"></i>przerwy</span><span><i class="blue"></i>czas obecności</span></div></header>
-      <div class="time-roster">${context.state.employees.map((employee) => {
+    const statusOrder = { Nieustalony: 0, Obecny: 1, Urlop: 2, Zwolnienie: 3 };
+    const employees = [...context.state.employees].sort((a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9) || a.name.localeCompare(b.name));
+    legacy.innerHTML = `<header class="time-roster-head"><div><span class="kicker">KOMPAKTOWA LISTA OBECNOŚCI</span><h3>Pracownicy, godziny i przerwy</h3><p>Najpierw widzisz tylko podsumowanie. Kliknij wiersz pracownika, aby zmienić jego harmonogram.</p></div><div class="time-legend"><span><i class="green"></i>czas netto</span><span><i class="amber"></i>15 min płatne</span><span><i class="blue"></i>czas obecności</span></div></header>
+      <div class="time-roster">${employees.map((employee) => {
         const present = employee.status === "Obecny";
         const breaks = employee.breaks || [];
+        const accounting = breakAccounting(employee);
         const net = employeeNetMinutes(employee);
-        const gross = present ? net + breaks.reduce((sum, item) => sum + Number(item.minutes || 0), 0) : 0;
-        return `<article class="time-worker-card ${present ? "" : "inactive"}">
-          <header><span class="person"><i class="avatar">${employee.name.split(" ").map((part) => part[0]).join("").slice(0, 2)}</i><span><b>${employee.name}</b><small>${employee.code}</small></span></span><strong>${present ? `${formatMinutes(net)} netto` : employee.status}</strong></header>
-          <div class="time-card-grid"><label><span>Status</span><select data-change="attendance" data-id="${employee.id}" aria-label="Status ${escapeHtml(employee.name)}">${["Obecny", "Urlop", "Zwolnienie", "Nieustalony"].map((status) => `<option ${employee.status === status ? "selected" : ""}>${status}</option>`).join("")}</select></label><label><span>Szablon</span><select data-time-template data-id="${employee.id}" ${present ? "" : "disabled"}><option value="custom">Indywidualnie</option><option value="early">05:45–14:00 · 1 przerwa</option><option value="double">06:00–14:30 · 2 przerwy</option><option value="late">07:00–15:30 · 1 przerwa</option></select></label><label><span>Start</span><input type="time" value="${present ? employee.start : ""}" data-time-field="start" data-id="${employee.id}" ${present ? "" : "disabled"}></label><label><span>Koniec</span><input type="time" value="${present ? employee.end : ""}" data-time-field="end" data-id="${employee.id}" ${present ? "" : "disabled"}></label><label><span>Liczba przerw</span><select data-break-count data-id="${employee.id}" ${present ? "" : "disabled"}><option value="1" ${breaks.length === 1 ? "selected" : ""}>1 przerwa</option><option value="2" ${breaks.length === 2 ? "selected" : ""}>2 przerwy</option></select></label></div>
-          <div class="break-editor">${present ? breaks.map((item, index) => `<div><span><b>Przerwa ${index + 1}</b><small>${item.start} · ${item.minutes} min</small></span><label><span>Od</span><input type="time" value="${item.start}" data-break-start data-break-index="${index}" data-id="${employee.id}"></label><label><span>Minuty</span><input type="number" min="5" max="90" step="5" value="${item.minutes}" data-break-minutes data-break-index="${index}" data-id="${employee.id}"></label></div>`).join("") : `<div class="break-empty">Przerwy nie są liczone przy statusie „${employee.status}”.</div>`}</div>
-          <footer><label><span>Notatka do czasu pracy</span><input value="${escapeHtml(employee.timeNote || "")}" placeholder="np. późniejszy przyjazd" data-time-note data-id="${employee.id}"></label><div class="time-total"><span><small>Obecność</small><b>${present ? formatMinutes(gross) : "—"}</b></span><i>−</i><span><small>Przerwy</small><b>${present ? `${breaks.reduce((sum, item) => sum + Number(item.minutes || 0), 0)} min` : "—"}</b></span><i>=</i><span class="net"><small>Do rozliczenia</small><b>${present ? formatMinutes(net) : "—"}</b></span></div></footer>
-        </article>`;
+        const gross = present ? net + accounting.deducted : 0;
+        const expanded = featureState.expandedTimeCards.includes(employee.id) || employee.status === "Nieustalony";
+        return `<details class="time-worker-card ${present ? "" : "inactive"}" data-time-card-id="${employee.id}" ${expanded ? "open" : ""}>
+          <summary><span class="person"><i class="avatar">${employee.name.split(" ").map((part) => part[0]).join("").slice(0, 2)}</i><span><b>${employee.name}</b><small>${employee.code}</small></span></span><span class="time-worker-summary"><em>${employee.status}</em><span class="time-range"><small>Godziny</small><b>${present ? `${employee.start}–${employee.end}` : "—"}</b></span><span class="time-break-summary"><small>Przerwy</small><b>${present ? `${accounting.total} min · ${accounting.paid} płatne` : "—"}</b></span><strong>${present ? `${formatMinutes(net)} netto` : "Brak godzin"}</strong><i class="time-chevron">⌄</i></span></summary>
+          <div class="time-worker-details"><div class="time-card-grid"><label><span>Status</span><select data-change="attendance" data-id="${employee.id}" aria-label="Status ${escapeHtml(employee.name)}">${["Obecny", "Urlop", "Zwolnienie", "Nieustalony"].map((status) => `<option ${employee.status === status ? "selected" : ""}>${status}</option>`).join("")}</select></label><label><span>Szablon</span><select data-time-template data-id="${employee.id}" ${present ? "" : "disabled"}><option value="custom">Indywidualnie</option><option value="early">05:45–14:00 · 1 przerwa</option><option value="double">06:00–14:30 · 2 przerwy</option><option value="late">07:00–15:30 · 1 przerwa</option></select></label><label><span>Start</span><input type="time" value="${present ? employee.start : ""}" data-time-field="start" data-id="${employee.id}" ${present ? "" : "disabled"}></label><label><span>Koniec</span><input type="time" value="${present ? employee.end : ""}" data-time-field="end" data-id="${employee.id}" ${present ? "" : "disabled"}></label><label><span>Liczba przerw</span><select data-break-count data-id="${employee.id}" ${present ? "" : "disabled"}><option value="1" ${breaks.length === 1 ? "selected" : ""}>1 przerwa</option><option value="2" ${breaks.length === 2 ? "selected" : ""}>2 przerwy</option></select></label></div>
+          <div class="break-editor">${present ? breaks.map((item, index) => `<div><span><b>Przerwa ${index + 1}</b><small>${item.start} · ${item.minutes} min${index === 0 ? ` · ${accounting.paid} min płatne` : ""}</small></span><label><span>Od</span><input type="time" value="${item.start}" data-break-start data-break-index="${index}" data-id="${employee.id}"></label><label><span>Minuty</span><input type="number" min="5" max="90" step="5" value="${item.minutes}" data-break-minutes data-break-index="${index}" data-id="${employee.id}"></label></div>`).join("") : `<div class="break-empty">Przerwy nie są liczone przy statusie „${employee.status}”.</div>`}</div>
+          <footer><label><span>Notatka do czasu pracy</span><input value="${escapeHtml(employee.timeNote || "")}" placeholder="np. późniejszy przyjazd" data-time-note data-id="${employee.id}"></label><div class="time-total"><span><small>Obecność</small><b>${present ? formatMinutes(gross) : "—"}</b></span><i>−</i><span><small>Do odliczenia</small><b>${present ? `${accounting.deducted} min` : "—"}</b></span><i>=</i><span class="net"><small>Do rozliczenia</small><b>${present ? formatMinutes(net) : "—"}</b></span></div></footer></div>
+        </details>`;
       }).join("")}</div>
-      <footer class="time-roster-foot"><span><b>Automatyczne rozliczenie:</b> koniec − start − suma przerw. Obsługiwane są również zmiany przechodzące przez północ.</span><button class="primary" data-module-action="save-schedule">Zapisz harmonogram czasu</button></footer>`;
+      <footer class="time-roster-foot"><span><b>Zasada rozliczenia:</b> pierwsze 15 minut pierwszej przerwy jest wliczone do godzin pracy. Odliczana jest pozostała część pierwszej przerwy i cała druga przerwa.</span><button class="primary" data-module-action="save-schedule">Zapisz harmonogram czasu</button></footer>`;
   }
 
   function applyRolePermissions() {
@@ -811,9 +822,16 @@
     }
   }
 
+  function rememberExpandedTimeCards(extraId = null) {
+    const ids = Array.from(context.app.querySelectorAll(".time-worker-card[open]"), (card) => Number(card.dataset.timeCardId));
+    if (extraId && !ids.includes(Number(extraId))) ids.push(Number(extraId));
+    featureState.expandedTimeCards = ids.filter(Boolean);
+  }
+
   function handleTimeControl(control) {
     const employee = context.state.employees.find((item) => item.id === Number(control.dataset.id));
     if (!employee) return;
+    rememberExpandedTimeCards(employee.id);
     if (control.matches("[data-time-template]")) {
       const templates = {
         early: { start: "05:45", end: "14:00", breaks: [{ start: "09:00", minutes: 20 }] },
@@ -866,6 +884,9 @@
       saveDesignState();
       context.render();
     });
+    context.app.addEventListener("toggle", (event) => {
+      if (event.target.matches(".time-worker-card")) rememberExpandedTimeCards();
+    }, true);
     context.app.addEventListener("input", (event) => {
       if (event.target.matches("[data-module-search]")) {
         featureState.search = event.target.value;
@@ -879,6 +900,7 @@
     });
     context.app.addEventListener("change", (event) => {
       if (event.target.matches('[data-change="attendance"]')) {
+        rememberExpandedTimeCards(event.target.dataset.id);
         featureState.scheduleSaved = false;
         context.render();
         return;

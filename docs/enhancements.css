@@ -902,3 +902,52 @@ body {
   .hydra-start-panel > footer > span { grid-template-columns: 1fr; gap: 1px; text-align: center; }
   .role-focus-panel { padding: 14px; }
 }
+
+/* Kompaktowa lista obecności — szczegóły dopiero po rozwinięciu pracownika */
+.time-roster { grid-template-columns: 1fr; gap: 7px; padding: 11px; }
+.time-worker-card { min-height: 0; padding: 0; overflow: hidden; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: none; }
+.time-worker-card.inactive { opacity: .82; }
+.time-worker-card > summary { min-height: 64px; padding: 9px 12px; display: grid; grid-template-columns: minmax(210px, 1fr) minmax(520px, 1.6fr); align-items: center; gap: 15px; list-style: none; cursor: pointer; }
+.time-worker-card > summary::-webkit-details-marker { display: none; }
+.time-worker-card > summary:hover { background: #f8faf9; }
+.time-worker-card[open] > summary { background: #fff8f7; border-bottom: 1px solid #ecd7d4; }
+.time-worker-card[open] .time-chevron { color: var(--red); transform: rotate(180deg); }
+.time-worker-summary { min-width: 0; display: grid; grid-template-columns: 88px 105px minmax(145px, 1fr) 94px 22px; align-items: center; gap: 10px; }
+.time-worker-summary > em { width: max-content; padding: 6px 8px; color: var(--green); background: var(--mint); border-radius: 99px; font-size: 8px; font-style: normal; font-weight: 900; }
+.time-worker-card.inactive .time-worker-summary > em { color: #6a746f; background: #edf1ef; }
+.time-worker-summary span small,
+.time-worker-summary span b { display: block; }
+.time-worker-summary span small { color: #7a8780; font-size: 8px; font-weight: 800; }
+.time-worker-summary span b { margin-top: 3px; overflow: hidden; color: #34473d; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.time-worker-summary > strong { justify-self: end; padding: 7px 9px; color: var(--green); background: var(--mint); border-radius: 9px; font-size: 10px; white-space: nowrap; }
+.time-worker-card.inactive .time-worker-summary > strong { color: #6e7972; background: #f0f3f1; }
+.time-chevron { justify-self: end; color: #7d8b83; font-size: 16px; font-style: normal; transition: transform .16s ease; }
+.time-worker-details { padding: 12px 14px 14px; background: #fff; }
+.time-worker-details .time-card-grid { margin-top: 0; }
+.time-worker-details > footer { margin-top: 10px; padding-top: 11px; display: grid; grid-template-columns: minmax(160px, 1fr) auto; align-items: end; gap: 12px; border-top: 1px solid #edf1ee; }
+.time-worker-details > footer > label > span { display: block; margin-bottom: 5px; color: #68796f; font-size: 9px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+.time-worker-details > footer input { width: 100%; min-height: 38px; }
+
+@media (max-width: 1080px) {
+  .time-worker-card > summary { grid-template-columns: minmax(190px, 1fr) minmax(430px, 1.5fr); }
+  .time-worker-summary { grid-template-columns: 82px 95px minmax(125px, 1fr) 90px 20px; gap: 7px; }
+}
+
+@media (max-width: 900px) {
+  .time-worker-card > summary { grid-template-columns: minmax(175px, 1fr) minmax(290px, 1.25fr); }
+  .time-worker-summary { grid-template-columns: 82px 1fr 90px 20px; }
+  .time-break-summary { display: none; }
+  .time-worker-details > footer { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .time-roster { padding: 7px; gap: 6px; }
+  .time-worker-card > summary { min-height: 68px; padding: 9px 10px; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .time-worker-card .person .avatar { width: 31px; height: 31px; }
+  .time-worker-summary { grid-template-columns: auto auto 18px; gap: 6px; }
+  .time-range,
+  .time-break-summary { display: none; }
+  .time-worker-summary > em { padding: 5px 6px; font-size: 7px; }
+  .time-worker-summary > strong { padding: 6px; font-size: 9px; }
+  .time-worker-details { padding: 10px; }
+}
