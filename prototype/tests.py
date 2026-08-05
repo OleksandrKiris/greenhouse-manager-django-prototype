@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from django.test import SimpleTestCase
 from django.urls import reverse
 
@@ -29,3 +31,10 @@ class PrototypePageTests(SimpleTestCase):
         response = self.client.get(reverse("login"))
         self.assertContains(response, "/static/prototype/styles.css")
         self.assertContains(response, "/static/prototype/app.js")
+
+    def test_work_completion_tracks_people_rows_and_carts(self):
+        script = (Path(__file__).parent / "static" / "prototype" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('name="people"', script)
+        self.assertIn('name="row"', script)
+        self.assertIn('name="cart"', script)
+        self.assertIn("contributions", script)
