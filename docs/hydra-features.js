@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "2026.08.05.9";
+  const VERSION = "2026.08.05.10";
   const STORAGE_KEY = "greenhouse-hydra-settings-v1";
   const PENDING_KEY = "greenhouse-offline-queue-v1";
   const languages = {

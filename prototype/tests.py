@@ -371,3 +371,29 @@ class PrototypePageTests(SimpleTestCase):
             self.assertIn(marker, visual_script)
         for marker in [".context-active-row", ".context-chips", ".context-clear-all", ".context-saved.offline"]:
             self.assertIn(marker, styles)
+
+    def test_shift_exceptions_and_resource_assignment_are_connected(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        styles = (static_dir / "visual-system-v4.css").read_text(encoding="utf-8")
+        for marker in [
+            "function workflowPanel()",
+            "function exceptionCenterPanel()",
+            "function resourceState()",
+            "function enhanceTaskAssignmentForm()",
+            "function updateSmartAssignmentSummary(form)",
+            "input.disabled = true",
+            'action === "show-resource-conflicts"',
+            "v5-exception-center",
+            "v5-resource-board",
+            "v5-assignment-summary",
+        ]:
+            self.assertIn(marker, enhancements)
+        for marker in [
+            ".v5-exception-center",
+            ".v5-plan-resources",
+            ".v5-resource-board",
+            ".v5-assignment-summary",
+            ".v5-assignment-warning",
+        ]:
+            self.assertIn(marker, styles)

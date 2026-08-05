@@ -311,31 +311,29 @@
         : true;
     const flows = {
       Brygadzista: [
-        { screen: "planning", screens: ["planning"], label: "Plan", detail: missing ? `Brakuje ${missing} os.` : "Plan gotowy", done: planPublished && missing === 0 },
+        { screen: "planning", screens: ["dashboard", "planning"], label: "Plan", detail: missing ? `Brakuje ${missing} os.` : "Plan gotowy", done: planPublished && missing === 0 },
         { screen: "attendance", screens: ["attendance"], label: "Obecność", detail: unsettled ? `${unsettled} do decyzji` : "Statusy kompletne", done: unsettled === 0 },
         { screen: "tasks", screens: ["tasks", "productivity", "team", "crop", "tickets", "materials"], label: "Realizacja", detail: openWork ? `${openWork} aktywne prace` : "Prace zakończone", done: openWork === 0 },
         { screen: "reports", screens: ["reports"], label: "Raport", detail: state.shiftClosed ? "Zmiana zamknięta" : "Do zamknięcia", done: state.shiftClosed },
       ],
       Kierownik: [
-        { screen: "planning", screens: ["planning"], label: "Plan", detail: missing ? `Brakuje ${missing} os.` : "Obsada gotowa", done: planPublished && missing === 0 },
+        { screen: "planning", screens: ["dashboard", "planning"], label: "Plan", detail: missing ? `Brakuje ${missing} os.` : "Obsada gotowa", done: planPublished && missing === 0 },
         { screen: "attendance", screens: ["attendance", "tasks", "team"], label: "Organizacja", detail: unsettled ? `${unsettled} nieustalone` : "Ludzie potwierdzeni", done: unsettled === 0 },
         { screen: "tickets", screens: ["crop", "tickets", "materials"], label: "Ryzyka", detail: criticalTickets ? `${criticalTickets} krytyczne` : "Bez krytycznych", done: criticalTickets === 0 },
         { screen: "reports", screens: ["productivity", "reports"], label: "Raport", detail: state.shiftClosed ? "Zmiana zamknięta" : "Oczekuje", done: state.shiftClosed },
       ],
       "Ochrona roślin": [
-        { screen: "planning", screens: ["planning"], label: "Kontekst", detail: "Plan do wglądu", done: true },
-        { screen: "crop", screens: ["crop"], label: "Obserwacje", detail: highCrop ? `${highCrop} alarmy` : "Brak alarmów", done: highCrop === 0 },
+        { screen: "crop", screens: ["dashboard", "crop"], label: "Obserwacje", detail: highCrop ? `${highCrop} alarmy` : "Brak alarmów", done: highCrop === 0 },
         { screen: "materials", screens: ["materials"], label: "Działania", detail: "Materiały i zabiegi", done: featureState.protectionTaskCreated },
         { screen: "reports", screens: ["reports"], label: "Przekazanie", detail: "Raport kierownika", done: featureState.reportApproved },
       ],
       "Dział techniczny": [
-        { screen: "planning", screens: ["planning"], label: "Kontekst", detail: "Plan do wglądu", done: true },
-        { screen: "tickets", screens: ["tickets"], label: "Zgłoszenia", detail: criticalTickets ? `${criticalTickets} krytyczne` : "SLA pod kontrolą", done: criticalTickets === 0 },
+        { screen: "tickets", screens: ["dashboard", "tickets"], label: "Zgłoszenia", detail: criticalTickets ? `${criticalTickets} krytyczne` : "SLA pod kontrolą", done: criticalTickets === 0 },
         { screen: "materials", screens: ["materials"], label: "Realizacja", detail: `${openTickets().length} aktywnych`, done: openTickets().length === 0 },
         { screen: "reports", screens: ["reports"], label: "Przekazanie", detail: "Historia napraw", done: featureState.reportApproved },
       ],
       Kadry: [
-        { screen: "attendance", screens: ["attendance"], label: "Czas pracy", detail: unsettled ? `${unsettled} do decyzji` : "Kompletne dane", done: unsettled === 0 },
+        { screen: "attendance", screens: ["dashboard", "attendance"], label: "Czas pracy", detail: unsettled ? `${unsettled} do decyzji` : "Kompletne dane", done: unsettled === 0 },
         { screen: "team", screens: ["team"], label: "Pracownicy", detail: "Dokumenty i bilans", done: false },
         { screen: "reports", screens: ["reports"], label: "Rozliczenie", detail: featureState.reportApproved ? "Zatwierdzone" : "Do zatwierdzenia", done: featureState.reportApproved },
       ],
@@ -346,6 +344,64 @@
       <header><span><small>TWÓJ PROCES · ${escapeHtml(state.role)}</small><b>Wiesz, co jest teraz i co będzie dalej</b></span><em>Etap ${activeIndex + 1} z ${steps.length}</em></header>
       <div>${steps.map((step, index) => { const active = step.screens.includes(state.screen); const attention = !step.done && ((step.label === "Plan" && missing) || step.label === "Obecność" && unsettled || step.label === "Czas pracy" && unsettled || step.label === "Ryzyka" && criticalTickets || step.label === "Obserwacje" && highCrop || step.label === "Zgłoszenia" && criticalTickets); return `<button class="${active ? "active" : ""} ${step.done ? "done" : ""} ${attention ? "attention" : ""}" data-nav="${step.screen}" ${active ? 'aria-current="step"' : ""}><i>${step.done ? "✓" : attention ? "!" : index + 1}</i><span><b>${step.label}</b><small>${step.detail}</small></span><em>→</em></button>`; }).join("")}</div>
     </section>`;
+  }
+
+  function resourceState() {
+    const tasks = activeTasks();
+    const peopleAssignments = new Map();
+    const cartAssignments = new Map();
+    tasks.forEach((task) => {
+      (task.people || []).forEach((person) => {
+        if (!peopleAssignments.has(person)) peopleAssignments.set(person, []);
+        peopleAssignments.get(person).push(task);
+      });
+      if (task.cart && task.cart !== "—") {
+        if (!cartAssignments.has(task.cart)) cartAssignments.set(task.cart, []);
+        cartAssignments.get(task.cart).push(task);
+      }
+    });
+    const present = context.state.employees.filter((employee) => employee.status === "Obecny");
+    const peopleConflicts = [...peopleAssignments.entries()].filter(([, assignments]) => assignments.length > 1);
+    const cartConflicts = [...cartAssignments.entries()].filter(([, assignments]) => assignments.length > 1);
+    return {
+      tasks,
+      peopleAssignments,
+      cartAssignments,
+      peopleConflicts,
+      cartConflicts,
+      availablePeople: present.filter((employee) => !peopleAssignments.has(employee.name)),
+      freeCarts: Math.max(0, 12 - cartAssignments.size),
+    };
+  }
+
+  function exceptionCenterPanel() {
+    const { state } = context;
+    const missingPlan = activePlan().reduce((sum, item) => sum + Math.max(0, item.need - item.assigned), 0);
+    const unsettled = state.employees.filter((employee) => employee.status === "Nieustalony").length;
+    const paused = activeTasks().filter((task) => task.status === "Wstrzymane").length;
+    const incomplete = scopedTasks().filter((task) => task.status === "Zakończone" && (!task.contributions?.length || !task.result || !task.hours)).length;
+    const alarms = openObservations().filter((item) => item.severity === "high").length;
+    const critical = openTickets().filter((ticket) => ticket.priority === "Krytyczny").length;
+    const unassignedTickets = openTickets().filter((ticket) => ticket.owner.includes("kolejka")).length;
+    const lowMaterials = state.materials.filter((item) => item.quantity < item.min).length;
+    const allowed = {
+      Brygadzista: ["planning", "attendance", "tasks", "crop", "tickets", "materials", "reports"],
+      Kierownik: ["planning", "attendance", "tasks", "crop", "tickets", "materials", "reports"],
+      "Ochrona roślin": ["crop", "materials", "reports"],
+      "Dział techniczny": ["tickets", "materials", "reports"],
+      Kadry: ["attendance", "team", "reports"],
+    }[state.role];
+    const issues = [
+      ["attendance", "Nieustalona obecność", unsettled, `${unsettled} osób wymaga decyzji przed rozliczeniem`, "red"],
+      ["planning", "Brak obsady planu", missingPlan, `Brakuje ${missingPlan} osób w bieżącym planie`, "amber"],
+      ["tasks", "Wstrzymane prace", paused, `${paused} zadań czeka na decyzję brygadzisty`, "red"],
+      ["tasks", "Niekompletne wyniki", incomplete, `${incomplete} zakończonych prac nie ma pełnych danych`, "amber"],
+      ["crop", "Alarmy upraw", alarms, `${alarms} miejsc wymaga pilnej kontroli`, "red"],
+      ["tickets", "Krytyczne zgłoszenia", critical, `${critical} zgłoszeń ma najwyższy priorytet`, "red"],
+      ["tickets", "Zgłoszenia bez właściciela", unassignedTickets, `${unassignedTickets} zgłoszeń czeka w kolejce`, "amber"],
+      ["materials", "Niskie stany", lowMaterials, `${lowMaterials} materiałów jest poniżej minimum`, "amber"],
+    ].filter(([screen, , count]) => allowed.includes(screen) && count > 0);
+    return `<section class="v5-exception-center surface" aria-label="Centrum wyjątków"><header><div><span class="kicker">WYMAGA DZIAŁANIA</span><h2>${issues.length ? `${issues.length} typów wyjątków do sprawdzenia` : "Brak wyjątków blokujących zmianę"}</h2><p>${issues.length ? "Każdy przycisk prowadzi bezpośrednio do modułu, w którym można rozwiązać problem." : "System nie wykrył braków wymagających reakcji w Twoim zakresie."}</p></div><span class="v5-exception-total ${issues.length ? "attention" : "ready"}"><b>${issues.reduce((sum, issue) => sum + issue[2], 0)}</b><small>rekordów</small></span></header>${issues.length ? `<div class="v5-exception-list">${issues.map(([screen, title, count, detail, tone]) => `<button class="${tone}" data-module-action="quick-nav" data-target="${screen}"><i>${count}</i><span><b>${title}</b><small>${detail}</small></span><em>Otwórz →</em></button>`).join("")}</div>` : `<div class="v5-exception-ready"><i>✓</i><span><b>Możesz kontynuować bieżący etap.</b><small>Nowe wyjątki pojawią się tutaj automatycznie.</small></span></div>`}</section>`;
   }
 
   function designStudioPanel() {
@@ -452,10 +508,13 @@
     const missing = plan.reduce((sum, item) => sum + Math.max(0, item.need - item.assigned), 0);
     const high = plan.filter((item) => item.priority === "Wysoki").length;
     const published = state.role === "Kierownik" ? state.planPublication[state.selectedPlanSite] : state.role === "Brygadzista" ? state.planPublication[state.selectedSite] : Object.values(state.planPublication).every(Boolean);
+    const resources = resourceState();
+    const conflicts = resources.peopleConflicts.length + resources.cartConflicts.length;
     return `<section class="module-upgrade planning-upgrade">
       <div class="upgrade-head"><div><span class="kicker">${state.role === "Kierownik" ? "KONTROLA PRZED PUBLIKACJĄ" : "PLAN DO REALIZACJI"}</span><h2>${state.role === "Kierownik" ? "Plan kompletny i bez konfliktów" : "Sprawdź instrukcję i potwierdź plan"}</h2><p>${state.role === "Kierownik" ? "Data, obsada, odpowiedzialność i norma są sprawdzane dla wybranego obiektu." : "W tym ekranie brygadzista sprawdza zakres, obsadę, normę i instrukcję kierownika."}</p></div><div class="upgrade-actions">${state.role === "Kierownik" ? `<button class="secondary" data-module-action="copy-plan">Kopiuj na jutro</button><button class="secondary" data-module-action="balance-plan">Zaproponuj obsadę</button><button class="primary" data-module-action="validate-plan">Sprawdź plan</button>` : `<button class="primary" data-module-action="acknowledge-plan">${featureState.planAcknowledged ? "✓ Plan potwierdzony" : "Potwierdź zapoznanie"}</button>`}</div></div>
       <div class="upgrade-metrics">${metric("Pozycje", plan.length, "dla wybranego obiektu")}${metric("Brakujące osoby", missing, missing ? "do przydzielenia" : "obsada kompletna", missing ? "amber" : "green")}${metric("Wysoki priorytet", high, "pozycji do omówienia", high ? "red" : "green")}${metric("Publikacja", published ? "Gotowa" : "Robocza", published ? "brygadziści widzą plan" : "wymaga publikacji", published ? "green" : "blue")}</div>
       <div class="publication-checklist"><span class="${plan.length ? "done" : ""}"><i>${plan.length ? "✓" : "1"}</i><b>Zadania</b><small>${plan.length ? `${plan.length} pozycji` : "brak pozycji"}</small></span><span class="${missing === 0 ? "done" : "warn"}"><i>${missing === 0 ? "✓" : "2"}</i><b>Obsada</b><small>${missing ? `brakuje ${missing} os.` : "kompletna"}</small></span><span class="${plan.every((item) => item.foreman && item.chief) ? "done" : ""}"><i>✓</i><b>Odpowiedzialność</b><small>główny + realizujący</small></span><span class="${published ? "done" : ""}"><i>${published ? "✓" : "4"}</i><b>Publikacja</b><small>${featureState.planValidated ? "sprawdzono teraz" : published ? "opublikowany" : "oczekuje"}</small></span></div>
+      <div class="v5-plan-resources ${conflicts ? "attention" : "ready"}"><span><small>Dostępni teraz</small><b>${resources.availablePeople.length} osób · ${resources.freeCarts} wózków</b></span><span><small>Konflikty bieżących przydziałów</small><b>${conflicts || "brak"}</b></span><button class="secondary" data-nav="tasks">Sprawdź zasoby w Pracach →</button></div>
       ${featureState.planCopied ? `<div class="inline-confirmation">✓ Utworzono roboczą kopię planu na następny dzień. Można ją dalej redagować.</div>` : featureState.planAcknowledged ? `<div class="inline-confirmation">✓ Brygadzista potwierdził zapoznanie z bieżącą wersją planu.</div>` : ""}
     </section>`;
   }
@@ -483,10 +542,13 @@
     const paused = tasks.filter((task) => task.status === "Wstrzymane");
     const complete = tasks.filter((task) => task.status === "Zakończone");
     const people = new Set(activeTasks().flatMap((task) => task.people)).size;
+    const resources = resourceState();
+    const conflictCount = resources.peopleConflicts.length + resources.cartConflicts.length;
     return `<section class="module-upgrade tasks-upgrade">
       <div class="upgrade-head"><div><span class="kicker">STEROWANIE REALIZACJĄ</span><h2>Prace, ludzie i postęp w jednym miejscu</h2><p>Filtruj kolejkę, aktualizuj postęp i reaguj na zadania wstrzymane.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="advance-tasks">+10% do aktywnych</button><button class="primary" data-module-action="open-first-task">Otwórz najpilniejszą</button></div></div>
       <div class="upgrade-metrics">${metric("W trakcie", running.length, "aktywnych prac")}${metric("Wstrzymane", paused.length, paused.length ? "wymagają decyzji" : "brak blokad", paused.length ? "red" : "green")}${metric("Zakończone", complete.length, "z pełnym wynikiem", "blue")}${metric("Zaangażowani", people, "unikalnych osób")}</div>
       <div class="filter-row"><span>Status prac</span>${segmented("tasks", ["Wszystkie", "W trakcie", "Wstrzymane", "Zakończone"], featureState.taskFilter)}</div>
+      <section class="v5-resource-board"><header><div><span class="kicker">ASYSTENT ZASOBÓW</span><h3>Ludzie i wózki bez podwójnych przydziałów</h3></div><span class="${conflictCount ? "attention" : "ready"}">${conflictCount ? `${conflictCount} konflikty` : "✓ Bez konfliktów"}</span></header><div class="v5-resource-metrics"><span><small>Wolni pracownicy</small><b>${resources.availablePeople.length}</b></span><span><small>Przypisani</small><b>${resources.peopleAssignments.size}</b></span><span><small>Wolne wózki</small><b>${resources.freeCarts}/12</b></span><span><small>Konflikty</small><b>${conflictCount}</b></span></div>${conflictCount ? `<div class="v5-conflict-list">${resources.peopleConflicts.map(([person, assignments]) => `<span><i>!</i><b>${escapeHtml(person)}</b><small>${assignments.map((task) => task.title).join(" · ")}</small></span>`).join("")}${resources.cartConflicts.map(([cart, assignments]) => `<span><i>!</i><b>${escapeHtml(cart)}</b><small>${assignments.map((task) => task.title).join(" · ")}</small></span>`).join("")}</div>` : `<p class="v5-resource-ok">Każda osoba i każdy wózek ma tylko jedno aktywne przypisanie.</p>`}<footer><button class="secondary" data-module-action="show-resource-conflicts" ${conflictCount ? "" : "disabled"}>Pokaż konflikty</button>${context.state.role !== "Kierownik" ? `<button class="primary" data-action="new-task">Przydziel pracę</button>` : `<span>Kierownik widzi konflikty; brygadzista zmienia obsadę.</span>`}</footer></section>
     </section>`;
   }
 
@@ -735,6 +797,86 @@
     if (collapse) collapse.hidden = limit <= definition.initial;
   }
 
+  function updateSmartAssignmentSummary(form) {
+    if (!form) return;
+    const checked = Array.from(form.querySelectorAll('.employee-picker input[name="employees"]:checked'));
+    const peopleConflicts = checked.filter((input) => Number(input.closest("label")?.dataset.activeAssignments || 0) > 0);
+    const cart = form.querySelector('select[name="cart"]');
+    const cartBusy = cart?.selectedOptions[0]?.dataset.busy === "true";
+    const selected = form.querySelector("[data-v5-selected]");
+    const warning = form.querySelector("[data-v5-assignment-warning]");
+    if (selected) selected.textContent = String(checked.length);
+    if (warning) {
+      warning.classList.toggle("active", peopleConflicts.length > 0 || cartBusy);
+      warning.innerHTML = peopleConflicts.length || cartBusy
+        ? `<b>Sprawdź konflikt:</b> ${peopleConflicts.length ? `${peopleConflicts.map((input) => input.value).join(", ")} ma już aktywną pracę. ` : ""}${cartBusy ? `${cart.value} jest zajęty.` : ""}`
+        : "✓ Wybrani ludzie i wózek są dostępni.";
+    }
+  }
+
+  function enhanceTaskAssignmentForm() {
+    const form = context.app.querySelector('form[data-form="new-task"]');
+    if (form && !form.classList.contains("v5-smart-assignment")) {
+      form.classList.add("v5-smart-assignment");
+      const resources = resourceState();
+      const picker = form.querySelector(".employee-picker");
+      const cart = form.querySelector('select[name="cart"]');
+      const skills = ["Zbiór", "Liście", "Zawieszki", "Wózek", "Kontrola", "Prace rzędowe"];
+      if (picker) {
+        picker.insertAdjacentHTML("beforebegin", `<section class="v5-assignment-summary"><span><small>Dostępni pracownicy</small><b>${resources.availablePeople.length}</b></span><span><small>Wybrano</small><b data-v5-selected>0</b></span><span><small>Wolne wózki</small><b>${resources.freeCarts}</b></span><span><small>Aktywne konflikty</small><b>${resources.peopleConflicts.length + resources.cartConflicts.length}</b></span></section>`);
+        const labels = Array.from(picker.querySelectorAll(":scope > label"));
+        labels.forEach((label, index) => {
+          const input = label.querySelector('input[name="employees"]');
+          const assignments = resources.peopleAssignments.get(input?.value) || [];
+          label.dataset.activeAssignments = String(assignments.length);
+          label.classList.toggle("busy", assignments.length > 0);
+          if (assignments.length && input) {
+            input.checked = false;
+            input.disabled = true;
+            label.title = `Niedostępny: ${assignments.map((task) => task.title).join(" · ")}`;
+          }
+          label.querySelector("span")?.insertAdjacentHTML("beforeend", `<span class="v5-person-state ${assignments.length ? "busy" : "free"}">${assignments.length ? `${assignments.length} aktywna praca` : "Dostępny"}</span><span class="v5-person-skill">${skills[index % skills.length]}</span>`);
+        });
+        const availableInputs = labels.filter((label) => label.dataset.activeAssignments === "0").map((label) => label.querySelector('input[name="employees"]')).filter(Boolean);
+        if (!availableInputs.some((input) => input.checked)) availableInputs.slice(0, 2).forEach((input) => { input.checked = true; });
+      }
+      if (cart) {
+        let firstFree = null;
+        Array.from(cart.options).forEach((option) => {
+          const cartId = option.value;
+          option.value = cartId;
+          const assignments = resources.cartAssignments.get(cartId) || [];
+          option.dataset.busy = String(assignments.length > 0);
+          if (assignments.length) {
+            option.textContent = `${cartId} — zajęty: ${assignments[0].title}`;
+            option.disabled = true;
+          } else if (!firstFree) firstFree = option;
+        });
+        if (cart.selectedOptions[0]?.disabled && firstFree) firstFree.selected = true;
+      }
+      form.querySelector(".modal-actions")?.insertAdjacentHTML("beforebegin", `<div class="v5-assignment-warning" data-v5-assignment-warning></div>`);
+      updateSmartAssignmentSummary(form);
+    }
+
+    const reassign = context.app.querySelector('form[data-form="reassign-task"]');
+    if (reassign && !reassign.classList.contains("v5-smart-reassign")) {
+      reassign.classList.add("v5-smart-reassign");
+      const resources = resourceState();
+      const select = reassign.querySelector('select[name="employee"]');
+      let firstFree = null;
+      Array.from(select?.options || []).forEach((option) => {
+        const employeeName = option.value;
+        option.value = employeeName;
+        const assignments = resources.peopleAssignments.get(employeeName) || [];
+        option.textContent = assignments.length ? `${employeeName} — ${assignments.length} aktywna praca` : `${employeeName} — dostępny`;
+        option.disabled = assignments.length > 0;
+        if (!assignments.length && !firstFree) firstFree = option;
+      });
+      if (firstFree) firstFree.selected = true;
+      select?.closest("label")?.insertAdjacentHTML("afterend", `<div class="v5-reassign-note"><b>Asystent obsady</b><span>Wybierz osobę oznaczoną jako dostępna. System ostrzeże przed podwójnym przydziałem.</span></div>`);
+    }
+  }
+
   function injectEnhancements() {
     if (!context.state.loggedIn) {
       loginEnhancement();
@@ -744,10 +886,12 @@
     const pageHead = context.app.querySelector(".content > .page-head");
     if (!pageHead) return;
     const guidance = context.state.screen === "dashboard" ? roleFocusPanel() : screenScopePanel();
-    pageHead.insertAdjacentHTML("afterend", `${contextBar()}${guidance}${designStudioPanel()}${modulePanel()}`);
+    const operationalDashboard = context.state.screen === "dashboard" ? `${workflowPanel()}${exceptionCenterPanel()}` : "";
+    pageHead.insertAdjacentHTML("afterend", `${contextBar()}${guidance}${operationalDashboard}${designStudioPanel()}${modulePanel()}`);
     applyRolePermissions();
     renderFlexibleAttendance();
     simplifyDashboard();
+    enhanceTaskAssignmentForm();
     decorateReviewBlocks();
     renderLargeListControls();
     applyFilters();
@@ -898,6 +1042,16 @@
         state.modal = "reassign-task";
         render();
       } else notify("Brak aktywnych prac");
+    }
+    if (action === "show-resource-conflicts") {
+      const resources = resourceState();
+      const target = resources.peopleConflicts[0]?.[0] || resources.cartConflicts[0]?.[0];
+      if (!target) return notify("Nie wykryto konfliktów ludzi ani wózków");
+      featureState.taskFilter = "Wszystkie";
+      featureState.search = target;
+      saveFeaturePreferences();
+      render();
+      return;
     }
     if (action === "download-tasks") {
       exportJson("prace-biezace-demo.json", scopedTasks());
@@ -1082,6 +1236,8 @@
       }
     });
     context.app.addEventListener("change", (event) => {
+      const assignmentForm = event.target.closest('form[data-form="new-task"]');
+      if (assignmentForm) updateSmartAssignmentSummary(assignmentForm);
       if (event.target.matches('[data-change="attendance"]')) {
         rememberExpandedTimeCards(event.target.dataset.id);
         featureState.scheduleSaved = false;
