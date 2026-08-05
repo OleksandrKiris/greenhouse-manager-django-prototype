@@ -3,6 +3,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path("manifest.webmanifest", views.manifest, name="manifest"),
+    path("sw.js", views.service_worker, name="service_worker"),
     path("", views.prototype, {"screen": "login"}, name="login"),
     path("panel/", views.prototype, {"screen": "dashboard"}, name="dashboard"),
     path("plan/", views.prototype, {"screen": "planning"}, name="planning"),

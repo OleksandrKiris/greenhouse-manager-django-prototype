@@ -33,9 +33,13 @@ class PrototypePageTests(SimpleTestCase):
         self.assertContains(response, "/static/prototype/planning.css")
         self.assertContains(response, "/static/prototype/visual-refresh.css")
         self.assertContains(response, "/static/prototype/enhancements.css")
+        self.assertContains(response, "/static/prototype/hydra-features.css")
         self.assertContains(response, "/static/prototype/enhancements.js")
+        self.assertContains(response, "/static/prototype/hydra-features.js")
         self.assertContains(response, "/static/prototype/brand-logo.svg")
         self.assertContains(response, "/static/prototype/app.js")
+        self.assertContains(response, "/manifest.webmanifest")
+        self.assertContains(response, 'data-service-worker-url="/sw.js"')
 
     def test_brand_logo_and_visual_refresh_are_connected(self):
         static_dir = Path(__file__).parent / "static" / "prototype"
@@ -267,3 +271,32 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn("large-list-toolbar", styles)
         self.assertIn("compact-lists", styles)
         self.assertIn("position: static", styles)
+
+    def test_hydra_features_add_languages_voice_offline_and_mobile_installation(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        script = (static_dir / "hydra-features.js").read_text(encoding="utf-8")
+        styles = (static_dir / "hydra-features.css").read_text(encoding="utf-8")
+        worker = (static_dir / "service-worker.js").read_text(encoding="utf-8")
+        app_script = (static_dir / "app.js").read_text(encoding="utf-8")
+        for language in ["pl", "ua", "ru", "en"]:
+            self.assertIn(f"{language}:", script)
+        for role in ["Brygadzista", "Kierownik", "Ochrona roślin", "Dział techniczny", "Kadry"]:
+            self.assertIn(role, script)
+        for marker in ["speechSynthesis", "beforeinstallprompt", "serviceWorker", "PENDING_KEY", "renderGuide", "startSync", "VERSION"]:
+            self.assertIn(marker, script)
+        self.assertIn("GreenhouseHydra?.afterRender", app_script)
+        self.assertIn("safe-area-inset", styles)
+        self.assertIn("prefers-reduced-motion", styles)
+        self.assertIn("hydra-to-top", styles)
+        self.assertIn("CACHE_NAME", worker)
+        self.assertIn("ignoreSearch", worker)
+
+    def test_pwa_manifest_and_service_worker_are_served_by_django(self):
+        manifest = self.client.get(reverse("manifest"))
+        self.assertEqual(manifest.status_code, 200)
+        self.assertEqual(manifest["Content-Type"], "application/manifest+json")
+        self.assertEqual(manifest.json()["display"], "standalone")
+        worker = self.client.get(reverse("service_worker"))
+        self.assertEqual(worker.status_code, 200)
+        self.assertIn("application/javascript", worker["Content-Type"])
+        self.assertContains(worker, "greenhouse-manager-")

@@ -1,0 +1,217 @@
+:root { --hydra-scroll: 0%; }
+
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.sidebar {
+  padding-top: calc(27px + env(safe-area-inset-top));
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+
+.hydra-system-controls {
+  margin: 8px 4vw 0;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  background: rgba(255, 255, 255, .92);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 7px 20px rgba(9, 55, 36, .05);
+}
+
+.hydra-language {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 6px;
+  align-items: center;
+}
+.hydra-language > span { color: var(--muted); font-size: 8px; font-weight: 900; }
+.hydra-language select { min-height: 36px; width: auto; padding: 0 28px 0 9px; font-size: 9px; }
+
+.hydra-tool,
+.hydra-version {
+  min-height: 36px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #315343;
+  background: #f3f7f5;
+  border: 1px solid #d7e5dc;
+  border-radius: 9px;
+  font-size: 8px;
+  font-weight: 900;
+}
+.hydra-tool i { font-size: 13px; font-style: normal; }
+.hydra-tool:hover,
+.hydra-version:hover { color: #fff; background: var(--green); border-color: var(--green); }
+.hydra-version { color: #6b756f; background: transparent; }
+
+.hydra-sync {
+  min-height: 36px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #24714d;
+  background: #ebf8f1;
+  border: 1px solid #d1ebdc;
+  border-radius: 9px;
+  font-size: 8px;
+  font-weight: 900;
+}
+.hydra-sync > i { width: 7px; height: 7px; background: #37b979; border-radius: 50%; box-shadow: 0 0 0 3px rgba(55, 185, 121, .12); }
+.hydra-sync.offline { color: #a45b00; background: #fff5e3; border-color: #f0d6a8; }
+.hydra-sync.offline > i { background: #d98717; box-shadow: 0 0 0 3px rgba(217, 135, 23, .13); }
+
+.hydra-update-banner {
+  margin: 8px 4vw 0;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #573d95, #765fc0);
+  border-radius: 12px;
+  box-shadow: 0 9px 24px rgba(72, 48, 137, .2);
+}
+.hydra-update-banner span { display: flex; align-items: center; gap: 8px; font-size: 10px; }
+.hydra-update-banner i { font-size: 17px; font-style: normal; }
+.hydra-update-banner button { min-height: 36px; padding: 0 12px; color: #503a88; background: #fff; border: 0; border-radius: 8px; font-size: 8px; font-weight: 900; }
+
+.hydra-login-tools {
+  margin: 14px 0;
+  padding: 9px;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 7px;
+  align-items: end;
+  background: #eef5f1;
+  border: 1px solid #d7e5dd;
+  border-radius: 12px;
+}
+.hydra-login-tools label > span { display: block; margin-bottom: 4px; color: var(--muted); font-size: 8px; font-weight: 900; }
+.hydra-login-tools select,
+.hydra-login-tools button { min-height: 42px; }
+.hydra-login-tools button { padding: 0 12px; color: #174e35; background: #fff; border: 1px solid #cfded5; border-radius: 9px; font-size: 9px; font-weight: 900; }
+
+.hydra-guide-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+  display: grid;
+  place-items: center;
+  background: rgba(4, 28, 18, .62);
+  backdrop-filter: blur(12px);
+}
+.hydra-guide {
+  width: min(620px, 100%);
+  max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow: auto;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid rgba(255, 255, 255, .5);
+  border-radius: 20px;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, .25);
+}
+.hydra-guide > header { padding: 22px 22px 17px; display: grid; grid-template-columns: 1fr auto; gap: 16px; background: linear-gradient(145deg, #edf8f2, #fff 58%, #fff6e8); border-bottom: 1px solid var(--line); }
+.hydra-guide > header span { color: var(--green2); font-size: 8px; font-weight: 950; letter-spacing: .12em; }
+.hydra-guide > header h2 { margin: 6px 0 5px; font-size: 25px; letter-spacing: -.035em; }
+.hydra-guide > header p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.hydra-guide > header button { width: 42px; height: 42px; color: #607068; background: #fff; border: 1px solid var(--line); border-radius: 11px; font-size: 20px; }
+.hydra-guide-steps { padding: 14px 22px; display: grid; gap: 8px; }
+.hydra-guide-steps article { padding: 11px; display: grid; grid-template-columns: 38px 1fr; gap: 11px; align-items: center; background: #f7faf8; border: 1px solid #dfe9e3; border-radius: 12px; }
+.hydra-guide-steps article > i { display: grid; place-items: center; width: 38px; height: 38px; color: #fff; background: var(--green); border-radius: 10px; font-size: 12px; font-style: normal; font-weight: 950; }
+.hydra-guide-steps small,
+.hydra-guide-steps b { display: block; }
+.hydra-guide-steps small { color: var(--green2); font-size: 7px; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+.hydra-guide-steps b { margin-top: 3px; font-size: 11px; line-height: 1.4; }
+.hydra-guide > footer { padding: 14px 22px 20px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--line); }
+.hydra-guide > footer button { min-height: 44px; }
+
+.hydra-saving-overlay {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+  background: rgba(4, 28, 18, .16);
+  transition: opacity .15s ease;
+}
+.hydra-saving-overlay.visible { opacity: 1; }
+.hydra-saving-overlay > span { padding: 12px 16px; display: flex; align-items: center; gap: 9px; color: #fff; background: var(--green); border-radius: 12px; box-shadow: 0 14px 35px rgba(4, 37, 23, .23); font-size: 10px; }
+.hydra-saving-overlay i { width: 16px; height: 16px; border: 2px solid rgba(255, 255, 255, .4); border-top-color: #fff; border-radius: 50%; animation: hydra-spin .8s linear infinite; }
+.hydra-pressed { transform: scale(.97) !important; }
+
+.hydra-scroll-progress {
+  position: fixed;
+  z-index: 80;
+  inset: 0 0 auto;
+  height: 3px;
+  pointer-events: none;
+  background: linear-gradient(90deg, var(--red) 0 var(--hydra-scroll), transparent var(--hydra-scroll) 100%);
+}
+.hydra-to-top {
+  position: fixed;
+  z-index: 42;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--green);
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 0 12px 28px rgba(4, 50, 29, .22);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px);
+  transition: .2s ease;
+}
+.hydra-to-top.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.hydra-to-top span { font-size: 20px; }
+
+@keyframes hydra-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) {
+  .sidebar { padding-top: calc(10px + env(safe-area-inset-top)); }
+  .workspace .topbar { top: calc(58px + env(safe-area-inset-top)); }
+  .hydra-system-controls { margin: 7px 12px 0; padding: 7px; overflow-x: auto; justify-content: flex-start; scrollbar-width: none; }
+  .hydra-system-controls::-webkit-scrollbar { display: none; }
+  .hydra-tool,
+  .hydra-language select,
+  .hydra-sync,
+  .hydra-version { min-height: 42px; flex: 0 0 auto; }
+  .hydra-language > span { display: none; }
+  .hydra-update-banner { margin: 7px 12px 0; }
+  .hydra-to-top { bottom: calc(82px + env(safe-area-inset-bottom)); }
+  .mobile-bottom-nav { bottom: calc(7px + env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 560px) {
+  .hydra-tool span,
+  .hydra-sync span { white-space: nowrap; }
+  .hydra-login-tools { grid-template-columns: 1fr 1fr; }
+  .hydra-login-tools label { grid-column: 1 / -1; }
+  .hydra-guide-backdrop { padding: 0; align-items: stretch; }
+  .hydra-guide { width: 100%; max-height: 100dvh; border-radius: 0; }
+  .hydra-guide > header { padding: calc(18px + env(safe-area-inset-top)) 16px 15px; }
+  .hydra-guide-steps { padding: 12px 16px; }
+  .hydra-guide > footer { position: sticky; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1fr; background: #fff; }
+  .hydra-guide > footer button { width: 100%; }
+  .hydra-update-banner { align-items: stretch; flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}

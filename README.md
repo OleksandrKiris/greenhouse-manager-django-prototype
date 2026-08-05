@@ -9,6 +9,10 @@ Publiczna makieta aplikacji zastępującej zeszyty brygadzistów w szklarni. Rep
 ## Co można sprawdzić
 
 - logowanie i wybór roli,
+- kluczową nawigację i przewodniki roli w językach polskim, ukraińskim, rosyjskim i angielskim z zapamiętaniem wyboru oraz parametrem `?lang=`,
+- krótkie wprowadzenie po pierwszym logowaniu dla każdej roli oraz opcjonalny odczyt instrukcji głosem systemowym telefonu,
+- instalację makiety na ekranie głównym jako PWA, pamięć ostatnio otwartych ekranów i tryb awaryjny przy słabym internecie,
+- widoczny stan połączenia, kolejkę demonstracyjnych operacji offline, komunikat synchronizacji, numer wersji i informację o dostępnej aktualizacji,
 - firmowe logo oraz odświeżony, responsywny system wizualny dla komputerów, tabletów i telefonów,
 - spokojny system wizualny inspirowany portalem CITRONEX Hydra: białe powierzchnie, stonowana czerwień, proste karty i jeden wyróżniony pierwszy krok,
 - wspólny kontekst daty, zmiany, obiektu i wyszukiwania oraz dziesięć odrębnych centrów pracy z własnymi metrykami, filtrami i działaniami,
@@ -37,6 +41,7 @@ Publiczna makieta aplikacji zastępującej zeszyty brygadzistów w szklarni. Rep
 - materiały, stany minimalne, wydania i zapotrzebowania,
 - centrum powiadomień i akceptacje kierownika,
 - wygodny widok telefonu i tabletu z dolnymi skrótami, rozwijanym menu i pełnoekranowymi formularzami,
+- obsługę bezpiecznych marginesów telefonu, ograniczenia animacji, pasek postępu przewijania i przycisk powrotu na górę,
 - raport zmiany i walidację brakujących danych,
 - projektowanie makiety wspólnie z zespołem: oznaczanie każdego bloku jako „zostawić”, „zmienić” lub „usunąć”, dopisywanie propozycji nowych elementów i eksport wszystkich decyzji do JSON,
 - zbieranie komentarzy do makiety i eksport opinii do JSON.

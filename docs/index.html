@@ -2,22 +2,29 @@
 <html lang="pl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="Klikalna makieta aplikacji Greenhouse Manager przygotowana jako projekt Django.">
+  <meta name="theme-color" content="#0b4d34">
+  <meta name="application-name" content="Greenhouse Manager">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta property="og:title" content="Greenhouse Manager · prototyp Django">
   <meta property="og:description" content="Klikalna makieta procesu zmiany">
   <meta property="og:image" content="og.png">
   <title>Greenhouse Manager · prototyp Django</title>
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="planning.css">
   <link rel="stylesheet" href="visual-refresh.css">
   <link rel="stylesheet" href="enhancements.css">
+  <link rel="stylesheet" href="hydra-features.css">
   <link rel="icon" href="brand-logo.svg" type="image/svg+xml">
 </head>
 <body>
-  <div id="prototype-app" data-initial-screen="login" data-assets-prefix="./"></div>
+  <div id="prototype-app" data-initial-screen="login" data-assets-prefix="./" data-service-worker-url="./sw.js"></div>
   <noscript>Do obsługi klikalnej makiety potrzebny jest JavaScript.</noscript>
   <script src="enhancements.js"></script>
+  <script src="hydra-features.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

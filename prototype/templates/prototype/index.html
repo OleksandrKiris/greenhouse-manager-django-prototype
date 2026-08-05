@@ -3,19 +3,26 @@
 <html lang="pl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="Klikalna makieta aplikacji Greenhouse Manager przygotowana w Django.">
+  <meta name="theme-color" content="#0b4d34">
+  <meta name="application-name" content="Greenhouse Manager">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Greenhouse Manager · prototyp Django</title>
+  <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="{% static 'prototype/styles.css' %}">
   <link rel="stylesheet" href="{% static 'prototype/planning.css' %}">
   <link rel="stylesheet" href="{% static 'prototype/visual-refresh.css' %}">
   <link rel="stylesheet" href="{% static 'prototype/enhancements.css' %}">
+  <link rel="stylesheet" href="{% static 'prototype/hydra-features.css' %}">
   <link rel="icon" href="{% static 'prototype/brand-logo.svg' %}" type="image/svg+xml">
 </head>
 <body>
-  <div id="prototype-app" data-initial-screen="{{ initial_screen }}" data-assets-prefix="{% static 'prototype/' %}"></div>
+  <div id="prototype-app" data-initial-screen="{{ initial_screen }}" data-assets-prefix="{% static 'prototype/' %}" data-service-worker-url="/sw.js"></div>
   <noscript>Do obsługi klikalnej makiety potrzebny jest JavaScript.</noscript>
   <script src="{% static 'prototype/enhancements.js' %}"></script>
+  <script src="{% static 'prototype/hydra-features.js' %}"></script>
   <script src="{% static 'prototype/app.js' %}"></script>
 </body>
 </html>

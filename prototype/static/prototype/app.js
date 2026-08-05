@@ -437,6 +437,7 @@
     app.innerHTML = state.loggedIn ? renderApp() : renderLogin();
     applyBrandLogo();
     window.GreenhouseEnhancements?.afterRender({ app, state, render, notify, navigate, exportJson, addTicketEvent, companySites, greenhouseSites, companyEmployeeCount, siteResponsibility, greenhouseEmployeeCount, supportEmployeeCount });
+    window.GreenhouseHydra?.afterRender({ app, state, render, notify });
   }
 
   app.addEventListener("click", (event) => {
