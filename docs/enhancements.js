@@ -21,6 +21,18 @@
     reportApproved: false,
     scheduleSaved: false,
     expandedTimeCards: [],
+    listDensity: "compact",
+    listLimits: {
+      planning: 4,
+      attendance: 6,
+      tasks: 4,
+      productivity: 6,
+      team: 6,
+      crop: 5,
+      tickets: 5,
+      materials: 4,
+      reports: 5,
+    },
   };
 
   const designState = loadDesignState();
@@ -94,6 +106,18 @@
     tickets: { icon: "⌘", title: "Zgłoszenia", purpose: "Wyłącznie problemy techniczne, odpowiedzialność, SLA i historia.", owns: ["źródło zgłoszenia", "lokalizacja", "właściciel", "status i historia"] },
     materials: { icon: "◇", title: "Materiały", purpose: "Wyłącznie stany, rezerwacje, wydania i zapotrzebowania.", owns: ["stan i minimum", "rezerwacja", "wydanie do pracy", "zamówienie"] },
     reports: { icon: "▦", title: "Raporty", purpose: "Wyłącznie podsumowanie zatwierdzonych danych z zakresu roli.", owns: ["kompletność", "wynik zmiany", "wyjątki", "akceptacja i eksport"] },
+  };
+
+  const largeListDefinitions = {
+    planning: { anchor: ".plan-board", item: ".plan-card", label: "pozycji planu", initial: 4, step: 4 },
+    attendance: { anchor: ".time-roster-shell", item: ".time-worker-card", label: "pracowników", initial: 6, step: 6 },
+    tasks: { anchor: ".task-grid", item: ".task", label: "prac", initial: 4, step: 4 },
+    productivity: { anchor: ".ranking", item: ".rank-row", label: "wyników osobowych", initial: 6, step: 6 },
+    team: { anchor: ".team-table", item: ".team-row", label: "pracowników", initial: 6, step: 6 },
+    crop: { anchor: ".observation-register", item: ".observation-list > button", label: "obserwacji", initial: 5, step: 5 },
+    tickets: { anchor: ".ticket-workspace", item: ".ticket-queue-item", label: "zgłoszeń", initial: 5, step: 5 },
+    materials: { anchor: ".materials-grid", item: ".material", label: "materiałów", initial: 4, step: 4 },
+    reports: { anchor: ".assignment-register", item: ".assignment-entry", label: "wpisów wykonania", initial: 5, step: 5 },
   };
 
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({
@@ -613,6 +637,43 @@
     });
   }
 
+  function renderLargeListControls() {
+    const definition = largeListDefinitions[context.state.screen];
+    const shell = context.app.querySelector(".shell");
+    shell?.classList.toggle("compact-lists", featureState.listDensity === "compact");
+    if (!definition) return;
+    const anchor = context.app.querySelector(definition.anchor);
+    const total = context.app.querySelectorAll(definition.item).length;
+    if (!anchor || !total) return;
+    anchor.classList.add("large-list-target");
+    anchor.dataset.listScreen = context.state.screen;
+    anchor.insertAdjacentHTML("beforebegin", `<section class="large-list-toolbar surface" aria-label="Sterowanie dużą listą">
+      <div class="large-list-summary"><i>≡</i><span><small>DUŻA LISTA · ${escapeHtml(screenDefinitions[context.state.screen]?.title || "REJESTR")}</small><b data-large-list-count aria-live="polite">Pokazano 0 z ${total}</b><p>Najpierw widzisz krótki zestaw; filtry i wyszukiwanie obejmują całą listę.</p></span></div>
+      <div class="list-density" role="group" aria-label="Gęstość listy"><button class="${featureState.listDensity === "compact" ? "active" : ""}" data-module-action="set-list-density" data-density="compact">Kompaktowo</button><button class="${featureState.listDensity === "comfortable" ? "active" : ""}" data-module-action="set-list-density" data-density="comfortable">Wygodnie</button></div>
+      <div class="large-list-actions"><button class="secondary" data-module-action="collapse-large-list">Zwiń</button><button class="secondary" data-module-action="show-more-list">Pokaż kolejne ${definition.step}</button><button class="primary" data-module-action="show-all-list">Pokaż wszystko</button></div>
+    </section>`);
+  }
+
+  function applyListWindow() {
+    const definition = largeListDefinitions[context.state.screen];
+    if (!definition) return;
+    const items = Array.from(context.app.querySelectorAll(definition.item));
+    const matching = items.filter((item) => item.dataset.filterHidden !== "true");
+    const limit = featureState.listLimits[context.state.screen] ?? definition.initial;
+    matching.forEach((item, index) => { item.hidden = index >= limit; });
+    const visible = Math.min(limit, matching.length);
+    const toolbar = context.app.querySelector(".large-list-toolbar");
+    if (!toolbar) return;
+    const counter = toolbar.querySelector("[data-large-list-count]");
+    if (counter) counter.textContent = `Pokazano ${visible} z ${matching.length} ${definition.label}`;
+    const more = toolbar.querySelector('[data-module-action="show-more-list"]');
+    const all = toolbar.querySelector('[data-module-action="show-all-list"]');
+    const collapse = toolbar.querySelector('[data-module-action="collapse-large-list"]');
+    if (more) more.hidden = visible >= matching.length;
+    if (all) all.hidden = visible >= matching.length || matching.length <= definition.initial;
+    if (collapse) collapse.hidden = limit <= definition.initial;
+  }
+
   function injectEnhancements() {
     if (!context.state.loggedIn) {
       loginEnhancement();
@@ -627,6 +688,7 @@
     renderFlexibleAttendance();
     simplifyDashboard();
     decorateReviewBlocks();
+    renderLargeListControls();
     applyFilters();
   }
 
@@ -683,11 +745,13 @@
     targets.forEach((element) => {
       const text = element.textContent.toLowerCase();
       const show = (!search || text.includes(search)) && (!scope || text.includes(scope)) && matchesModuleFilter(element);
+      element.dataset.filterHidden = show ? "false" : "true";
       element.hidden = !show;
       if (show) visible += 1;
     });
     const counter = context.app.querySelector(".context-search-count");
     if (counter) counter.textContent = search || scope || visible !== targets.length ? `${visible} z ${targets.length}` : "";
+    applyListWindow();
   }
 
   function handleFilter(button) {
@@ -709,6 +773,21 @@
     const action = button.dataset.moduleAction;
     if (action === "set-filter") return handleFilter(button);
     if (action === "quick-nav") return navigate(button.dataset.target);
+    if (action === "set-list-density") {
+      featureState.listDensity = button.dataset.density === "comfortable" ? "comfortable" : "compact";
+      render();
+      return;
+    }
+    if (["show-more-list", "show-all-list", "collapse-large-list"].includes(action)) {
+      const definition = largeListDefinitions[state.screen];
+      if (!definition) return;
+      const current = featureState.listLimits[state.screen] ?? definition.initial;
+      if (action === "show-more-list") featureState.listLimits[state.screen] = current + definition.step;
+      if (action === "show-all-list") featureState.listLimits[state.screen] = Number.MAX_SAFE_INTEGER;
+      if (action === "collapse-large-list") featureState.listLimits[state.screen] = definition.initial;
+      applyListWindow();
+      return;
+    }
     if (action === "validate-plan") {
       featureState.planValidated = true;
       const missing = activePlan().reduce((sum, item) => sum + Math.max(0, item.need - item.assigned), 0);

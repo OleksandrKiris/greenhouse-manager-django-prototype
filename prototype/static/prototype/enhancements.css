@@ -107,6 +107,47 @@
 .module-scope-items { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .module-scope-items span { padding: 8px 10px; color: #24553e; background: #edf7f1; border: 1px solid #d4e9dc; border-radius: 9px; font-size: 8px; font-weight: 850; }
 
+.large-list-toolbar {
+  position: sticky;
+  z-index: 8;
+  top: 76px;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  background: rgba(255, 255, 255, .96);
+  border-color: #d5e2da;
+  box-shadow: 0 9px 24px rgba(7, 48, 31, .08);
+  backdrop-filter: blur(14px);
+}
+.large-list-summary { display: grid; grid-template-columns: 34px 1fr; gap: 9px; align-items: center; }
+.large-list-summary > i { display: grid; place-items: center; width: 34px; height: 34px; color: #fff; background: var(--green); border-radius: 9px; font-size: 17px; font-style: normal; }
+.large-list-summary small,
+.large-list-summary b { display: block; }
+.large-list-summary small { color: var(--green2); font-size: 7px; font-weight: 950; letter-spacing: .09em; }
+.large-list-summary b { margin-top: 2px; font-size: 11px; }
+.large-list-summary p { margin: 2px 0 0; color: var(--muted); font-size: 8px; }
+.list-density { padding: 3px; display: flex; gap: 2px; background: #edf2ef; border-radius: 9px; }
+.list-density button { min-height: 32px; padding: 0 10px; color: #637269; background: transparent; border: 0; border-radius: 7px; font-size: 8px; font-weight: 850; }
+.list-density button.active { color: #fff; background: var(--green); }
+.large-list-actions { display: flex; gap: 6px; }
+.large-list-actions button { min-height: 36px; padding: 0 11px; font-size: 8px; white-space: nowrap; }
+.large-list-target { scroll-margin-top: 145px; }
+.compact-lists .large-list-target.task-grid,
+.compact-lists .large-list-target.plan-board,
+.compact-lists .large-list-target.materials-grid { gap: 8px; }
+.compact-lists .large-list-target .task,
+.compact-lists .large-list-target .material { min-height: 0; padding: 14px; }
+.compact-lists .large-list-target .plan-card { padding: 14px 16px; }
+.compact-lists .large-list-target .team-row,
+.compact-lists .large-list-target .assignment-entry,
+.compact-lists .large-list-target .rank-row { padding-top: 8px; padding-bottom: 8px; }
+.compact-lists .large-list-target .time-worker-card { padding: 10px 12px; }
+.compact-lists .large-list-target .observation-list > button,
+.compact-lists .large-list-target .ticket-queue-item { padding-top: 10px; padding-bottom: 10px; }
+
 .module-upgrade {
   margin-bottom: 17px;
   padding: 20px;
@@ -638,6 +679,11 @@ textarea { font-size: 12px; }
   .role-focus-panel { grid-template-columns: 1fr; padding: 13px; }
   .role-restriction { grid-column: auto; }
   .module-scope { grid-template-columns: 1fr; gap: 12px; }
+  .large-list-toolbar { position: static; grid-template-columns: 1fr; gap: 9px; }
+  .large-list-actions { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .large-list-actions button { min-height: 42px; white-space: normal; }
+  .list-density { width: 100%; }
+  .list-density button { min-height: 40px; flex: 1; }
   .module-upgrade { padding: 16px; border-radius: 15px; }
   .upgrade-head { flex-direction: column; gap: 13px; }
   .upgrade-actions { width: 100%; justify-content: stretch; }
@@ -678,6 +724,9 @@ textarea { font-size: 12px; }
   .role-rights { display: grid; grid-template-columns: 1fr 1fr; }
   .module-scope { padding: 12px; }
   .module-scope-items { grid-template-columns: 1fr; }
+  .large-list-summary p { display: none; }
+  .large-list-actions { grid-template-columns: 1fr 1fr; }
+  .large-list-actions .primary { grid-column: 1 / -1; }
   .workflow-panel { padding: 12px; }
   .workflow-panel > header { align-items: flex-start; }
   .workflow-panel > header span b { font-size: 11px; }

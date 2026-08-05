@@ -252,3 +252,18 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn("const supportEmployeeCount", script)
         self.assertIn("Brygady w szklarni", script)
         self.assertIn("team.people", script)
+
+    def test_large_lists_are_compact_progressive_and_mobile_friendly(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        styles = (static_dir / "enhancements.css").read_text(encoding="utf-8")
+        self.assertIn("const largeListDefinitions", enhancements)
+        self.assertIn("function renderLargeListControls()", enhancements)
+        self.assertIn("function applyListWindow()", enhancements)
+        for action in ["show-more-list", "show-all-list", "collapse-large-list", "set-list-density"]:
+            self.assertIn(action, enhancements)
+        for screen in ["planning", "attendance", "tasks", "productivity", "team", "crop", "tickets", "materials", "reports"]:
+            self.assertIn(f"{screen}:", enhancements)
+        self.assertIn("large-list-toolbar", styles)
+        self.assertIn("compact-lists", styles)
+        self.assertIn("position: static", styles)

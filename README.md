@@ -22,6 +22,7 @@ Publiczna makieta aplikacji zastępującej zeszyty brygadzistów w szklarni. Rep
 - dokładne miejsce pracy: strona szklarni względem łącznika → nawa → jeden z 5 wjazdów → lewa/prawa strona przejścia,
 - około 500 pracowników w przedsiębiorstwie, średnio 50–60 osób łącznie w każdej szklarni oraz pozostała obsada w obiektach wsparcia: sortowni głównej, sortowni etap 6 i starym magazynie,
 - priorytet widoku aktualnych planów, prac i problemów z możliwością włączenia historii,
+- usprawnione duże listy: priorytetowe rekordy na początku, licznik „pokazano X z Y”, stopniowe rozwijanie, pokazanie całości, zwijanie oraz przełącznik widoku kompaktowego i wygodnego,
 - kompaktową, rozwijaną listę obecności oraz status „nieustalony”, indywidualne godziny rozpoczęcia i zakończenia pracy, 1 albo 2 przerwy o różnych porach i długościach oraz automatycznie liczony czas netto; pierwsze 15 minut pierwszej przerwy jest płatne i pozostaje w godzinach pracy,
 - planowanie, wstrzymywanie, zmiana obsady i zamykanie prac,
 - przypisanie każdej pracy do konkretnych osób, brygadzisty, pełnej lokalizacji i wózka,
