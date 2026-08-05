@@ -14,6 +14,7 @@
     reminderSent: false,
     planValidated: false,
     planCopied: false,
+    planAcknowledged: false,
     copiedPlans: {},
     protectionTaskCreated: false,
     materialOrderCreated: false,
@@ -56,15 +57,15 @@
     },
     "Ochrona roślin": {
       title: "Zdrowie upraw i działania ochronne",
-      description: "Widzisz obserwacje ze wszystkich szklarni oraz plan pracy potrzebny do oceny ryzyka dla upraw.",
+      description: "Widzisz obserwacje ze wszystkich szklarni, działania ochronne, potrzebne materiały i raport swojego działu.",
       rights: ["Oceniaj obserwacje", "Przypisuj działania", "Zamykaj wpisy", "Zgłaszaj potrzebne materiały"],
-      restriction: "Nie zmieniasz obsady ani planu kierownika.",
+      restriction: "Nie widzisz ekranów obsady, prac ani planowania produkcji.",
     },
     "Dział techniczny": {
       title: "Usterki, SLA i przywrócenie pracy",
-      description: "Widzisz zgłoszenia techniczne wszystkich obiektów oraz kontekst planu potrzebny do ustalenia priorytetu.",
+      description: "Widzisz zgłoszenia techniczne wszystkich obiektów, potrzebne materiały i raport historii napraw.",
       rights: ["Przyjmuj zgłoszenia", "Przypisuj techników", "Aktualizuj status", "Zamykaj naprawy"],
-      restriction: "Plan produkcyjny i obsada pozostają tylko do odczytu.",
+      restriction: "Nie widzisz planu produkcyjnego, obecności ani danych wydajnościowych.",
     },
     Kadry: {
       title: "Czas pracy, nieobecności i dokumenty",
@@ -77,9 +78,22 @@
   const screensByRole = {
     Brygadzista: ["dashboard", "planning", "attendance", "tasks", "productivity", "team", "crop", "tickets", "materials", "reports"],
     Kierownik: ["dashboard", "planning", "attendance", "tasks", "productivity", "team", "crop", "tickets", "materials", "reports"],
-    "Ochrona roślin": ["dashboard", "planning", "crop", "materials", "reports"],
-    "Dział techniczny": ["dashboard", "planning", "tickets", "materials", "reports"],
+    "Ochrona roślin": ["dashboard", "crop", "materials", "reports"],
+    "Dział techniczny": ["dashboard", "tickets", "materials", "reports"],
     Kadry: ["dashboard", "attendance", "team", "reports"],
+  };
+
+  const screenDefinitions = {
+    dashboard: { icon: "⌂", title: "Podsumowanie", purpose: "Priorytety i decyzje na teraz — bez szczegółowych tabel roboczych.", owns: ["KPI zmiany", "najpilniejsze alerty", "decyzje roli", "skróty do modułów"] },
+    planning: { icon: "▣", title: "Plan zmiany", purpose: "Wyłącznie przygotowanie, obsada i publikacja planu dla obiektu.", owns: ["harmonogram", "potrzebna obsada", "norma i instrukcja", "publikacja"] },
+    attendance: { icon: "✓", title: "Lista obecności", purpose: "Wyłącznie status obecności, czas pracy, przerwy i wyjątki.", owns: ["status osoby", "start i koniec", "1 lub 2 przerwy", "czas netto"] },
+    tasks: { icon: "↗", title: "Prace", purpose: "Wyłącznie bieżąca realizacja zadań przez brygady.", owns: ["miejsce pracy", "ludzie i brygadzista", "wózek", "postęp i blokady"] },
+    productivity: { icon: "≈", title: "Wydajność", purpose: "Wyłącznie wyniki osobowe i zespołowe liczone w zgodnych jednostkach.", owns: ["kg/h", "rz./h", "norma", "trend i wsparcie"] },
+    team: { icon: "♙", title: "Pracownicy", purpose: "Wyłącznie dane potrzebne do doboru i rozwoju pracownika.", owns: ["dostępność", "kompetencje", "dokumenty", "bilans godzin"] },
+    crop: { icon: "◎", title: "Mapa obserwacji", purpose: "Wyłącznie obserwacje upraw i ich dokładna lokalizacja.", owns: ["etap i nawa", "strona łącznika", "wjazd i strona", "ocena i działanie"] },
+    tickets: { icon: "⌘", title: "Zgłoszenia", purpose: "Wyłącznie problemy techniczne, odpowiedzialność, SLA i historia.", owns: ["źródło zgłoszenia", "lokalizacja", "właściciel", "status i historia"] },
+    materials: { icon: "◇", title: "Materiały", purpose: "Wyłącznie stany, rezerwacje, wydania i zapotrzebowania.", owns: ["stan i minimum", "rezerwacja", "wydanie do pracy", "zamówienie"] },
+    reports: { icon: "▦", title: "Raporty", purpose: "Wyłącznie podsumowanie zatwierdzonych danych z zakresu roli.", owns: ["kompletność", "wynik zmiany", "wyjątki", "akceptacja i eksport"] },
   };
 
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({
@@ -186,6 +200,15 @@
       <div class="role-focus-title"><i>${state.role.split(" ").map((part) => part[0]).join("").slice(0, 2)}</i><span><small>TWÓJ WIDOK · ${escapeHtml(scope)}</small><b>${profile.title}</b><p>${profile.description}</p></span></div>
       <div class="role-rights">${profile.rights.map((right) => `<span>✓ ${right}</span>`).join("")}</div>
       <div class="role-restriction"><i>i</i><span><small>OGRANICZENIE UPRAWNIEŃ</small><b>${profile.restriction}</b></span></div>
+    </section>`;
+  }
+
+  function screenScopePanel() {
+    const definition = screenDefinitions[context.state.screen];
+    if (!definition) return "";
+    return `<section class="module-scope surface" aria-label="Zakres widoku ${escapeHtml(definition.title)}">
+      <div class="module-scope-title"><i>${definition.icon}</i><span><small>TEN WIDOK ZAWIERA TYLKO</small><b>${escapeHtml(definition.title)}</b><p>${escapeHtml(definition.purpose)}</p></span></div>
+      <div class="module-scope-items">${definition.owns.map((item) => `<span>✓ ${escapeHtml(item)}</span>`).join("")}</div>
     </section>`;
   }
 
@@ -303,12 +326,12 @@
       ],
       "Ochrona roślin": [
         ["priority", "ZACZNIJ TUTAJ", cropAlarms ? "Obsłuż alarmy upraw" : "Sprawdź nowe obserwacje", cropAlarms ? `${cropAlarms} alarmy wymagają oceny i przypisania działania.` : "Brak alarmów wysokiego ryzyka; sprawdź kolejkę obserwacji.", "crop", "Otwórz obserwacje"],
-        ["green", "KONTEKST", "Zobacz plan prac", "Sprawdź, gdzie pracują brygady i co może wpływać na uprawę.", "planning", "Zobacz plan"],
+        ["green", "DZIAŁANIA", "Sprawdź materiały ochrony", "Kontroluj dostępność środków i zgłoś zapotrzebowanie dla działań ochronnych.", "materials", "Otwórz materiały"],
         ["gold", "PRZEKAZANIE", "Przygotuj raport ochrony", "Właściciel, działanie, lokalizacja i historia pozostają w jednym wpisie.", "reports", "Otwórz raport"],
       ],
       "Dział techniczny": [
         ["priority", "ZACZNIJ TUTAJ", critical ? "Obsłuż krytyczne zgłoszenie" : "Sprawdź kolejkę techniczną", critical ? `${critical} zgłoszenie wymaga natychmiastowej reakcji.` : `${openTickets().length} aktywnych zgłoszeń do sprawdzenia.`, "tickets", "Otwórz kolejkę"],
-        ["green", "KONTEKST PRACY", "Sprawdź plan obiektu", "Zobacz wpływ usterki na brygadę, miejsce i aktualne zadania.", "planning", "Zobacz plan"],
+        ["green", "CZĘŚCI I MATERIAŁY", "Sprawdź dostępność do napraw", "Zarezerwuj część, wydaj materiał lub zgłoś brak potrzebny do realizacji.", "materials", "Otwórz materiały"],
         ["gold", "PRZEKAZANIE", "Uzupełnij historię napraw", "Status, realizujący, czas reakcji i potwierdzenie rozwiązania.", "reports", "Otwórz raport"],
       ],
       Kadry: [
@@ -340,23 +363,20 @@
 
   function planningPanel() {
     const { state } = context;
-    const nextByRole = state.role === "Brygadzista" ? ["tasks", "Przejdź do moich prac"] : state.role === "Ochrona roślin" ? ["crop", "Sprawdź ryzyko upraw"] : ["tickets", "Sprawdź zgłoszenia"];
     const plan = activePlan();
     const missing = plan.reduce((sum, item) => sum + Math.max(0, item.need - item.assigned), 0);
     const high = plan.filter((item) => item.priority === "Wysoki").length;
     const published = state.role === "Kierownik" ? state.planPublication[state.selectedPlanSite] : state.role === "Brygadzista" ? state.planPublication[state.selectedSite] : Object.values(state.planPublication).every(Boolean);
     return `<section class="module-upgrade planning-upgrade">
-      <div class="upgrade-head"><div><span class="kicker">${state.role === "Kierownik" ? "KONTROLA PRZED PUBLIKACJĄ" : "PLAN DO WGLĄDU"}</span><h2>${state.role === "Kierownik" ? "Plan kompletny i bez konfliktów" : "Tylko informacje potrzebne do Twojej pracy"}</h2><p>${state.role === "Kierownik" ? "Data, obsada, odpowiedzialność i norma są sprawdzane dla wybranego obiektu." : "Plan kierownika jest dostępny jako kontekst. Zmiany wykonuje wyłącznie osoba z odpowiednim uprawnieniem."}</p></div><div class="upgrade-actions">${state.role === "Kierownik" ? `<button class="secondary" data-module-action="copy-plan">Kopiuj na jutro</button><button class="secondary" data-module-action="balance-plan">Zaproponuj obsadę</button><button class="primary" data-module-action="validate-plan">Sprawdź plan</button>` : `<button class="primary" data-module-action="quick-nav" data-target="${nextByRole[0]}">${nextByRole[1]}</button>`}</div></div>
+      <div class="upgrade-head"><div><span class="kicker">${state.role === "Kierownik" ? "KONTROLA PRZED PUBLIKACJĄ" : "PLAN DO REALIZACJI"}</span><h2>${state.role === "Kierownik" ? "Plan kompletny i bez konfliktów" : "Sprawdź instrukcję i potwierdź plan"}</h2><p>${state.role === "Kierownik" ? "Data, obsada, odpowiedzialność i norma są sprawdzane dla wybranego obiektu." : "W tym ekranie brygadzista sprawdza zakres, obsadę, normę i instrukcję kierownika."}</p></div><div class="upgrade-actions">${state.role === "Kierownik" ? `<button class="secondary" data-module-action="copy-plan">Kopiuj na jutro</button><button class="secondary" data-module-action="balance-plan">Zaproponuj obsadę</button><button class="primary" data-module-action="validate-plan">Sprawdź plan</button>` : `<button class="primary" data-module-action="acknowledge-plan">${featureState.planAcknowledged ? "✓ Plan potwierdzony" : "Potwierdź zapoznanie"}</button>`}</div></div>
       <div class="upgrade-metrics">${metric("Pozycje", plan.length, "dla wybranego obiektu")}${metric("Brakujące osoby", missing, missing ? "do przydzielenia" : "obsada kompletna", missing ? "amber" : "green")}${metric("Wysoki priorytet", high, "pozycji do omówienia", high ? "red" : "green")}${metric("Publikacja", published ? "Gotowa" : "Robocza", published ? "brygadziści widzą plan" : "wymaga publikacji", published ? "green" : "blue")}</div>
       <div class="publication-checklist"><span class="${plan.length ? "done" : ""}"><i>${plan.length ? "✓" : "1"}</i><b>Zadania</b><small>${plan.length ? `${plan.length} pozycji` : "brak pozycji"}</small></span><span class="${missing === 0 ? "done" : "warn"}"><i>${missing === 0 ? "✓" : "2"}</i><b>Obsada</b><small>${missing ? `brakuje ${missing} os.` : "kompletna"}</small></span><span class="${plan.every((item) => item.foreman && item.chief) ? "done" : ""}"><i>✓</i><b>Odpowiedzialność</b><small>główny + realizujący</small></span><span class="${published ? "done" : ""}"><i>${published ? "✓" : "4"}</i><b>Publikacja</b><small>${featureState.planValidated ? "sprawdzono teraz" : published ? "opublikowany" : "oczekuje"}</small></span></div>
-      ${featureState.planCopied ? `<div class="inline-confirmation">✓ Utworzono roboczą kopię planu na następny dzień. Można ją dalej redagować.</div>` : ""}
+      ${featureState.planCopied ? `<div class="inline-confirmation">✓ Utworzono roboczą kopię planu na następny dzień. Można ją dalej redagować.</div>` : featureState.planAcknowledged ? `<div class="inline-confirmation">✓ Brygadzista potwierdził zapoznanie z bieżącą wersją planu.</div>` : ""}
     </section>`;
   }
 
   function attendancePanel() {
     const { state } = context;
-    const nextTarget = state.role === "Kadry" ? "reports" : "tasks";
-    const nextLabel = state.role === "Kadry" ? "Przejdź do raportu" : "Przydziel obecnych";
     const present = state.employees.filter((employee) => employee.status === "Obecny").length;
     const unsettled = state.employees.filter((employee) => employee.status === "Nieustalony").length;
     const absent = state.employees.length - present - unsettled;
@@ -366,7 +386,7 @@
     const scopePeople = state.role === "Brygadzista" ? sitePeople : state.role === "Kadry" ? context.companyEmployeeCount : state.role === "Kierownik" ? context.greenhouseEmployeeCount : state.employees.length;
     const scopeLabel = state.role === "Brygadzista" ? `${state.selectedSite} · ${scopePeople} osób łącznie` : state.role === "Kierownik" ? `${scopePeople} osób w 6 szklarniach` : state.role === "Kadry" ? `${scopePeople} osób w przedsiębiorstwie` : "przykładowy podgląd";
     return `<section class="module-upgrade attendance-upgrade">
-      <div class="upgrade-head"><div><span class="kicker">ELASTYCZNY CZAS PRACY</span><h2>Kompaktowa lista godzin i przerw</h2><p>Kliknij pracownika, aby rozwinąć szczegóły. Pierwsze 15 minut pierwszej przerwy jest płatne i pozostaje w czasie pracy.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="attendance-reminder">Przypomnij o potwierdzeniu</button><button class="primary" data-module-action="quick-nav" data-target="${nextTarget}">${nextLabel}</button></div></div>
+      <div class="upgrade-head"><div><span class="kicker">ELASTYCZNY CZAS PRACY</span><h2>Kompaktowa lista godzin i przerw</h2><p>Kliknij pracownika, aby rozwinąć szczegóły. Pierwsze 15 minut pierwszej przerwy jest płatne i pozostaje w czasie pracy.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="attendance-reminder">Przypomnij o potwierdzeniu</button><button class="primary" data-module-action="save-schedule">Zapisz czas i przerwy</button></div></div>
       <div class="upgrade-metrics">${metric("Obecni w podglądzie", present, `${state.employees.length} kart · ${scopeLabel}`)}${metric("Czas netto", `${Math.floor(netMinutes / 60)} h ${netMinutes % 60} min`, "z uwzględnieniem płatnej przerwy", "blue")}${metric("Płatne przerwy", `${paidBreakMinutes} min`, "do 15 min pierwszej przerwy")}${metric("Nieustaleni", unsettled, unsettled ? "wymagają decyzji" : "statusy kompletne", unsettled ? "amber" : "green")}</div>
       <div class="filter-row"><span>Filtr listy</span>${segmented("attendance", ["Wszyscy", "Obecni", "Nieustaleni", "Nieobecni"], featureState.attendanceFilter)}<small class="filter-result">${featureState.scheduleSaved ? "✓ harmonogram zapisany" : featureState.reminderSent ? "✓ przypomnienie zapisane" : `${absent} nieobecnych`}</small></div>
     </section>`;
@@ -392,7 +412,7 @@
     const kgRate = kg.length ? Math.round(kg.reduce((sum, entry) => sum + entry.result / entry.hours, 0) / kg.length) : 0;
     const rowRate = rows.length ? (rows.reduce((sum, entry) => sum + entry.result / entry.hours, 0) / rows.length).toFixed(2) : "0.00";
     return `<section class="module-upgrade productivity-upgrade">
-      <div class="upgrade-head"><div><span class="kicker">NORMY I TREND</span><h2>Porównuj tylko zgodne jednostki</h2><p>Kilogramy i rzędy są analizowane osobno, aby wynik był czytelny i uczciwy.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="quick-nav" data-target="team">Sprawdź kompetencje</button><button class="primary" data-module-action="download-productivity">Eksportuj wyniki</button></div></div>
+      <div class="upgrade-head"><div><span class="kicker">NORMY I TREND</span><h2>Porównuj tylko zgodne jednostki</h2><p>Kilogramy i rzędy są analizowane osobno, aby wynik był czytelny i uczciwy.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="check-productivity">Sprawdź wyniki poniżej normy</button><button class="primary" data-module-action="download-productivity">Eksportuj wyniki</button></div></div>
       <div class="upgrade-metrics">${metric("Średnio kg/h", kgRate, `${kg.length} zapisanych wyników`)}${metric("Średnio rz./h", rowRate, `${rows.length} zapisanych wyników`, "blue")}${metric("Powyżej normy", results.filter((entry) => entry.result / entry.hours >= (entry.unit === "kg" ? 120 : 1)).length, "indywidualnych wyników")}${metric("Do wsparcia", results.filter((entry) => entry.result / entry.hours < (entry.unit === "kg" ? 120 : .75)).length, "sprawdź przyczynę", "amber")}</div>
       <div class="filter-row"><span>Jednostka</span>${segmented("productivity", ["Wszystkie", "kg/h", "rz./h"], featureState.productivityUnit)}<small class="filter-result">Normy: zbiór 120 kg/h · prace rzędowe zależnie od rodzaju</small></div>
     </section>`;
@@ -405,7 +425,7 @@
     const expiring = Array.from(context.app.querySelectorAll(".team-row")).filter((row) => /08\.2026|09\.2026/.test(row.textContent)).length;
     const assignedPeople = new Set(activeTasks().flatMap((task) => task.people)).size;
     return `<section class="module-upgrade team-upgrade">
-      <div class="upgrade-head"><div><span class="kicker">DOSTĘPNOŚĆ I OBCIĄŻENIE</span><h2>Dobieraj ludzi według gotowości</h2><p>Status, kompetencje, obciążenie i dokumenty są widoczne przed przydziałem.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="set-team-expiring">Dokumenty do odnowienia</button><button class="primary" data-module-action="quick-nav" data-target="${state.role === "Kadry" ? "reports" : "tasks"}">${state.role === "Kadry" ? "Przejdź do raportu" : "Przydziel do pracy"}</button></div></div>
+      <div class="upgrade-head"><div><span class="kicker">DOSTĘPNOŚĆ I OBCIĄŻENIE</span><h2>Dobieraj ludzi według gotowości</h2><p>Status, kompetencje, obciążenie i dokumenty są widoczne w jednej karcie pracownika.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="set-team-expiring">Dokumenty do odnowienia</button><button class="primary" data-module-action="download-team">Eksportuj listę pracowników</button></div></div>
       <div class="upgrade-metrics">${metric("Dostępni", available, "w przykładowej brygadzie")}${metric("Już przydzieleni", assignedPeople, "do aktywnych prac", "blue")}${metric("Dokumenty", expiring, "wygasają do 60 dni", expiring ? "amber" : "green")}${metric("Mentorzy", mentors, "mogą wspierać wdrożenie")}</div>
       <div class="filter-row"><span>Widok zespołu</span>${segmented("team", ["Wszyscy", "Dostępni", "Mentorzy", "Dokumenty"], featureState.teamFilter)}</div>
     </section>`;
@@ -601,7 +621,7 @@
     ensureTimeProfiles();
     const pageHead = context.app.querySelector(".content > .page-head");
     if (!pageHead) return;
-    const guidance = context.state.screen === "dashboard" ? roleFocusPanel() : workflowPanel();
+    const guidance = context.state.screen === "dashboard" ? roleFocusPanel() : screenScopePanel();
     pageHead.insertAdjacentHTML("afterend", `${contextBar()}${guidance}${designStudioPanel()}${modulePanel()}`);
     applyRolePermissions();
     renderFlexibleAttendance();
@@ -711,6 +731,10 @@
       state.planPublication[state.selectedPlanSite] = false;
       notify("Zaproponowano pełną obsadę — plan pozostaje roboczy");
     }
+    if (action === "acknowledge-plan") {
+      featureState.planAcknowledged = true;
+      notify("Potwierdzono zapoznanie z bieżącym planem");
+    }
     if (action === "attendance-reminder") {
       featureState.reminderSent = true;
       notify("Zapisano przypomnienie dla osób niepotwierdzonych");
@@ -732,6 +756,15 @@
         render();
       } else notify("Brak aktywnych prac");
     }
+    if (action === "download-tasks") {
+      exportJson("prace-biezace-demo.json", scopedTasks());
+      notify("Przygotowano eksport prac i odpowiedzialności");
+    }
+    if (action === "check-productivity") {
+      const results = scopedTasks().flatMap((task) => (task.contributions || []).map((entry) => ({ ...entry, unit: task.unit })));
+      const below = results.filter((entry) => entry.result / entry.hours < (entry.unit === "kg" ? 120 : .75)).length;
+      notify(below ? `${below} wyniki wymagają sprawdzenia przyczyny` : "Wszystkie zapisane wyniki spełniają normę");
+    }
     if (action === "download-productivity") {
       exportJson("wydajnosc-zmiany-demo.json", scopedTasks().flatMap((task) => (task.contributions || []).map((entry) => ({ ...entry, zadanie: task.title, jednostka: task.unit, miejsce: task.site }))));
       notify("Przygotowano eksport wydajności");
@@ -739,6 +772,10 @@
     if (action === "set-team-expiring") {
       featureState.teamFilter = "Dokumenty";
       render();
+    }
+    if (action === "download-team") {
+      exportJson("pracownicy-zakresu-demo.json", state.employees);
+      notify("Przygotowano eksport listy pracowników");
     }
     if (action === "focus-high-observation") {
       const observation = openObservations().find((item) => item.severity === "high");

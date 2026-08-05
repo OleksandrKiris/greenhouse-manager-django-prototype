@@ -88,6 +88,25 @@
 .two-col.single-column { grid-template-columns: 1fr; }
 .reports.single-column { grid-template-columns: 1fr; }
 
+.module-scope {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: minmax(300px, 1.25fr) minmax(420px, 1.5fr);
+  gap: 18px;
+  align-items: center;
+  border-left: 4px solid var(--green2);
+}
+.module-scope-title { display: grid; grid-template-columns: 42px 1fr; gap: 11px; align-items: center; }
+.module-scope-title > i { display: grid; place-items: center; width: 42px; height: 42px; color: #fff; background: var(--green); border-radius: 12px; font-size: 18px; font-style: normal; }
+.module-scope-title small,
+.module-scope-title b { display: block; }
+.module-scope-title small { color: var(--green2); font-size: 7px; font-weight: 950; letter-spacing: .11em; }
+.module-scope-title b { margin-top: 3px; font-size: 15px; }
+.module-scope-title p { margin: 3px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.module-scope-items { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.module-scope-items span { padding: 8px 10px; color: #24553e; background: #edf7f1; border: 1px solid #d4e9dc; border-radius: 9px; font-size: 8px; font-weight: 850; }
+
 .module-upgrade {
   margin-bottom: 17px;
   padding: 20px;
@@ -618,6 +637,7 @@ textarea { font-size: 12px; }
   .context-saved { display: none; }
   .role-focus-panel { grid-template-columns: 1fr; padding: 13px; }
   .role-restriction { grid-column: auto; }
+  .module-scope { grid-template-columns: 1fr; gap: 12px; }
   .module-upgrade { padding: 16px; border-radius: 15px; }
   .upgrade-head { flex-direction: column; gap: 13px; }
   .upgrade-actions { width: 100%; justify-content: stretch; }
@@ -656,6 +676,8 @@ textarea { font-size: 12px; }
   .upgrade-segments button { min-height: 38px; }
   .login-capabilities { grid-template-columns: 1fr; }
   .role-rights { display: grid; grid-template-columns: 1fr 1fr; }
+  .module-scope { padding: 12px; }
+  .module-scope-items { grid-template-columns: 1fr; }
   .workflow-panel { padding: 12px; }
   .workflow-panel > header { align-items: flex-start; }
   .workflow-panel > header span b { font-size: 11px; }

@@ -68,9 +68,13 @@ class PrototypePageTests(SimpleTestCase):
         for action in [
             "copy-plan",
             "balance-plan",
+            "acknowledge-plan",
             "attendance-reminder",
             "advance-tasks",
+            "download-tasks",
+            "check-productivity",
             "download-productivity",
+            "download-team",
             "create-protection-task",
             "assign-ticket-queue",
             "create-material-orders",
@@ -164,6 +168,7 @@ class PrototypePageTests(SimpleTestCase):
         script = (static_dir / "app.js").read_text(encoding="utf-8")
         styles = (static_dir / "styles.css").read_text(encoding="utf-8")
         self.assertIn("mobile-bottom-nav", script)
+        self.assertIn("const mobileScreens", script)
         self.assertIn("toggle-mobile-nav", script)
         self.assertNotIn('class="journey"', script)
         self.assertIn("@media(max-width:900px)", styles)
@@ -189,7 +194,7 @@ class PrototypePageTests(SimpleTestCase):
         for class_name in ["time-worker-card", "design-studio", "design-block-toolbar"]:
             self.assertIn(class_name, styles)
 
-    def test_role_workflow_and_priority_ordering_are_explicit(self):
+    def test_each_screen_has_an_isolated_operational_scope(self):
         static_dir = Path(__file__).parent / "static" / "prototype"
         script = (static_dir / "app.js").read_text(encoding="utf-8")
         enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
@@ -197,9 +202,25 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn("review: false", script)
         self.assertIn("const taskOrder", script)
         self.assertIn("const ticketPriority", script)
-        self.assertIn("function workflowPanel()", enhancements)
-        self.assertIn("TWÓJ PROCES", enhancements)
-        self.assertIn("workflow-panel", styles)
+        self.assertIn("const screenDefinitions", enhancements)
+        self.assertIn("function screenScopePanel()", enhancements)
+        self.assertIn('TEN WIDOK ZAWIERA TYLKO', enhancements)
+        self.assertIn('? roleFocusPanel() : screenScopePanel()', enhancements)
+        self.assertIn("module-scope", styles)
+        for screen in self.pages.values():
+            if screen != "login":
+                self.assertIn(f"{screen}:", enhancements)
+
+    def test_specialist_roles_only_receive_their_own_navigation_modules(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        script = (static_dir / "app.js").read_text(encoding="utf-8")
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        plant_scope = '["dashboard", "crop", "materials", "reports"]'
+        technical_scope = '["dashboard", "tickets", "materials", "reports"]'
+        hr_scope = '["dashboard", "attendance", "team", "reports"]'
+        for scope in [plant_scope, technical_scope, hr_scope]:
+            self.assertIn(scope, script)
+            self.assertIn(scope, enhancements)
 
     def test_hydra_inspired_start_panel_keeps_only_primary_dashboard_actions(self):
         static_dir = Path(__file__).parent / "static" / "prototype"

@@ -25,8 +25,8 @@
   const access = {
     Brygadzista: navItems.map((item) => item[0]),
     Kierownik: navItems.map((item) => item[0]),
-    "Ochrona roślin": ["dashboard", "planning", "crop", "materials", "reports"],
-    "Dział techniczny": ["dashboard", "planning", "tickets", "materials", "reports"],
+    "Ochrona roślin": ["dashboard", "crop", "materials", "reports"],
+    "Dział techniczny": ["dashboard", "tickets", "materials", "reports"],
     Kadry: ["dashboard", "attendance", "team", "reports"],
   };
   const companyEmployeeCount = 500;
@@ -320,7 +320,7 @@
 
   function tasks() {
     const taskOrder={"Wstrzymane":0,"W trakcie":1,"Zakończone":2}; const visible=[...scopedTasks()].sort((a,b)=>(taskOrder[a.status]??9)-(taskOrder[b.status]??9)||Number(b.progress||0)-Number(a.progress||0)); const manager=state.role==="Kierownik";
-    return `${pageHead("PLAN I WYKONANIE", manager?"Kontrola realizacji":"Moje aktualne prace", manager?"Kierownik kontroluje wykonanie planu; zadania i ludzi obsługują odpowiedzialni brygadziści.":"Każde zadanie łączy ludzi z dokładnym miejscem i wózkiem.", manager?`<button class="secondary" data-nav="planning">Wróć do planu</button>`:`<button class="primary" data-action="new-task">+ Dodaj zadanie z planu</button>`)}
+    return `${pageHead("PLAN I WYKONANIE", manager?"Kontrola realizacji":"Moje aktualne prace", manager?"Kierownik kontroluje wykonanie planu; zadania i ludzi obsługują odpowiedzialni brygadziści.":"Każde zadanie łączy ludzi z dokładnym miejscem i wózkiem.", manager?`<button class="secondary" data-module-action="download-tasks">↓ Eksport prac</button>`:`<button class="primary" data-action="new-task">+ Dodaj zadanie z planu</button>`)}
       <section class="compact surface"><div><span>Zakres</span><b>${manager?"Cały zakład":state.selectedSite}</b></div><div><span>Widoczne zadania</span><b>${visible.length}</b></div><div><span>Widok</span><b>${state.currentOnly?"Aktualne":"Wszystkie"}</b></div><div><span>Rola</span><b>${manager?"Kontrola":"Realizacja"}</b></div></section>
       <section class="task-grid">${visible.map((task) => `<article class="task surface"><div class="task-top"><span class="chip ${task.status === "Zakończone" ? "done" : task.status === "Wstrzymane" ? "paused" : ""}">${task.status}</span><small>${task.site}</small></div><h3>${task.title}</h3><p class="location-path">${locationLabel(task)}</p><div class="task-location"><span><small>BRYGADZISTA</small><b>${task.foreman}</b></span><span><small>WÓZEK</small><b>${task.cart || "—"}</b></span></div><div class="people">${task.people.map((person) => `<i class="avatar" title="${person}">${initials(person)}</i>`).join("")}<small>${task.people.length} os.</small>${task.status !== "Zakończone"&&!manager ? `<button class="mini-link" data-action="reassign-task" data-id="${task.id}">Zmień obsadę</button>` : ""}</div><p class="assigned-names"><b>${task.status === "Zakończone" ? "Wykonali:" : "Pracują:"}</b> ${task.people.join(", ")}</p><div class="task-result"><div><span>Realizacja</span><b>${task.status === "Zakończone" ? rate(task) : `${task.progress}%`}</b></div><div class="bar"><i style="width:${task.progress}%"></i></div></div>${task.status !== "Zakończone"&&!manager ? `<div class="task-actions"><button class="ghost" data-action="toggle-task" data-id="${task.id}">${task.status === "Wstrzymane" ? "Wznów" : "Wstrzymaj"}</button><button class="primary" data-action="finish-task" data-id="${task.id}">Zakończ i oznacz osoby</button></div>` : task.status === "Zakończone"?`<div class="saved">✓ ${task.contributions.length} os. potwierdzone · ${rate(task)}</div>`:`<div class="saved">Nadzór: ${task.foreman}</div>`}</article>`).join("") || `<div class="empty surface"><b>Brak aktualnych prac</b><p>Włącz „Wszystkie”, aby zobaczyć historię.</p></div>`}</section>`;
   }
@@ -411,7 +411,14 @@
     const nav = visibleNav();
     const screens = { dashboard, planning, attendance, tasks, productivity, team, crop, tickets, materials, reports };
     const unread = roleNotifications().filter((item)=>!item.read).length;
-    const mobileTabs = ["dashboard","planning","tasks","reports"].filter((screen)=>access[state.role].includes(screen)).map((screen)=>navItems.find((item)=>item[0]===screen));
+    const mobileScreens = {
+      Brygadzista: ["dashboard", "planning", "tasks", "attendance"],
+      Kierownik: ["dashboard", "planning", "tasks", "reports"],
+      "Ochrona roślin": ["dashboard", "crop", "materials", "reports"],
+      "Dział techniczny": ["dashboard", "tickets", "materials", "reports"],
+      Kadry: ["dashboard", "attendance", "team", "reports"],
+    }[state.role];
+    const mobileTabs = mobileScreens.map((screen)=>navItems.find((item)=>item[0]===screen));
     return `<div class="shell ${state.mobileNavOpen?"mobile-menu-open":""} ${state.review?"reviewing":""}"><aside class="sidebar"><div class="sidebar-title"><div class="brand"><span>CITR</span><i>O</i><span>NEX</span></div><button class="mobile-menu-button" data-action="toggle-mobile-nav" aria-expanded="${state.mobileNavOpen}" aria-label="${state.mobileNavOpen?"Zamknij menu":"Otwórz menu"}"><i>${state.mobileNavOpen?"×":"☰"}</i><span>Menu</span></button></div><small class="brand-sub">GREENHOUSE MANAGER · DJANGO</small><nav class="nav" aria-label="Nawigacja główna">${nav.map((item)=>`<button class="${state.screen===item[0]?"active":""}" data-nav="${item[0]}"><i>${item[3]}</i>${item[1]}</button>`).join("")}</nav><div class="role-switch"><span class="kicker light">PODGLĄD ROLI</span><select data-change="role" aria-label="Zmień rolę">${roles.map((role)=>`<option ${state.role===role?"selected":""}>${role}</option>`).join("")}</select></div><button class="user" data-action="logout"><i class="avatar">AK</i><span><b>Anna Kowalska</b><small>${state.role}</small></span><span>↩</span></button></aside>
       <div class="workspace"><header class="topbar"><div class="shift-info"><span>BIEŻĄCA ZMIANA</span><b>05.08.2026 · ${state.role==="Brygadzista"?state.selectedSite:"wszystkie obiekty"}</b></div><div class="top-actions"><button class="current-view-toggle ${state.currentOnly?"active":""}" data-action="toggle-current">${state.currentOnly?"● Aktualne":"◷ Wszystkie"}</button><button class="notification-button" data-action="open-notifications" aria-label="Powiadomienia">●<span>Powiadomienia</span>${unread?`<b>${unread}</b>`:""}</button><button class="review-toggle" data-action="toggle-review">● Tryb oceny makiety</button><span class="state-pill ${state.shiftClosed?"closed":""}">${state.shiftClosed?"ZAMKNIĘTA":"W TRAKCIE"}</span></div></header><main class="content">${screens[state.screen]()}</main></div>
       <nav class="mobile-bottom-nav" aria-label="Skróty mobilne">${mobileTabs.map((item)=>`<button class="${state.screen===item[0]?"active":""}" data-nav="${item[0]}"><i>${item[3]}</i><span>${item[2]}</span></button>`).join("")}<button class="${state.mobileNavOpen?"active":""}" data-action="toggle-mobile-nav"><i>☰</i><span>Menu</span></button></nav>
