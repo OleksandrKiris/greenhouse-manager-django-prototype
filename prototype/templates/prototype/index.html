@@ -1,0 +1,16 @@
+{% load static %}
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Klikalna makieta aplikacji Greenhouse Manager przygotowana w Django.">
+  <title>Greenhouse Manager · prototyp Django</title>
+  <link rel="stylesheet" href="{% static 'prototype/styles.css' %}">
+</head>
+<body>
+  <div id="prototype-app" data-initial-screen="{{ initial_screen }}"></div>
+  <noscript>Do obsługi klikalnej makiety potrzebny jest JavaScript.</noscript>
+  <script src="{% static 'prototype/app.js' %}"></script>
+</body>
+</html>
