@@ -34,6 +34,7 @@ class PrototypePageTests(SimpleTestCase):
         self.assertContains(response, "/static/prototype/visual-refresh.css")
         self.assertContains(response, "/static/prototype/enhancements.css")
         self.assertContains(response, "/static/prototype/hydra-features.css")
+        self.assertContains(response, "/static/prototype/frontend-v2.css")
         self.assertContains(response, "/static/prototype/enhancements.js")
         self.assertContains(response, "/static/prototype/hydra-features.js")
         self.assertContains(response, "/static/prototype/brand-logo.svg")
@@ -300,3 +301,15 @@ class PrototypePageTests(SimpleTestCase):
         self.assertEqual(worker.status_code, 200)
         self.assertIn("application/javascript", worker["Content-Type"])
         self.assertContains(worker, "greenhouse-manager-")
+
+    def test_frontend_v2_improves_readability_and_touch_navigation(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        styles = (static_dir / "frontend-v2.css").read_text(encoding="utf-8")
+        script = (static_dir / "app.js").read_text(encoding="utf-8")
+        for marker in ["--v2-green", ".login-card", ".large-list-toolbar", ".mobile-bottom-nav", ":focus-visible", "safe-area-inset-bottom"]:
+            self.assertIn(marker, styles)
+        self.assertIn('aria-pressed="${state.role === role}"', script)
+        self.assertIn("<span>${item[1]}</span>", script)
+        self.assertTrue((static_dir / "og-v2.png").exists())
+        response = self.client.get(reverse("login"))
+        self.assertContains(response, "/static/prototype/og-v2.png")

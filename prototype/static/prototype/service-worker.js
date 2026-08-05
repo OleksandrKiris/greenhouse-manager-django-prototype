@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "greenhouse-manager-";
-const CACHE_NAME = `${CACHE_PREFIX}2026-08-05-4`;
+const CACHE_NAME = `${CACHE_PREFIX}2026-08-05-5`;
 const CORE = ["./", "./manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {

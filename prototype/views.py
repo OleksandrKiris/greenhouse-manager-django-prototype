@@ -18,7 +18,7 @@ def manifest(request):
             "scope": "/",
             "display": "standalone",
             "background_color": "#f3f6f4",
-            "theme_color": "#0b4d34",
+            "theme_color": "#0d5b3b",
             "icons": [
                 {
                     "src": "/static/prototype/brand-logo.svg",

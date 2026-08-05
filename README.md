@@ -14,6 +14,7 @@ Publiczna makieta aplikacji zastępującej zeszyty brygadzistów w szklarni. Rep
 - instalację makiety na ekranie głównym jako PWA, pamięć ostatnio otwartych ekranów i tryb awaryjny przy słabym internecie,
 - widoczny stan połączenia, kolejkę demonstracyjnych operacji offline, komunikat synchronizacji, numer wersji i informację o dostępnej aktualizacji,
 - firmowe logo oraz odświeżony, responsywny system wizualny dla komputerów, tabletów i telefonów,
+- frontend 2.0 z większą typografią, wyraźniejszą hierarchią priorytetów, czytelnymi statusami, wygodnymi polami dotykowymi i spójnym wyglądem wszystkich modułów,
 - spokojny system wizualny inspirowany portalem CITRONEX Hydra: białe powierzchnie, stonowana czerwień, proste karty i jeden wyróżniony pierwszy krok,
 - wspólny kontekst daty, zmiany, obiektu i wyszukiwania oraz dziesięć odrębnych centrów pracy z własnymi metrykami, filtrami i działaniami,
 - ścisłe rozdzielenie ekranów: szczegóły obecności są tylko w „Liście obecności”, wykonanie tylko w „Pracach”, wyniki tylko w „Wydajności”, a widok łączący priorytety znajduje się wyłącznie w „Podsumowaniu”,
