@@ -18,11 +18,27 @@
     protectionTaskCreated: false,
     materialOrderCreated: false,
     reportApproved: false,
+    scheduleSaved: false,
   };
+
+  const designState = loadDesignState();
 
   let context = null;
   let eventsBound = false;
   let lastScreen = null;
+
+  function loadDesignState() {
+    try {
+      const saved = JSON.parse(localStorage.getItem("greenhouse-layout-design") || "{}");
+      return { decisions: saved.decisions || {}, proposals: saved.proposals || [] };
+    } catch (_) {
+      return { decisions: {}, proposals: [] };
+    }
+  }
+
+  function saveDesignState() {
+    localStorage.setItem("greenhouse-layout-design", JSON.stringify(designState));
+  }
 
   const roleProfiles = {
     Brygadzista: {
@@ -87,6 +103,50 @@
   const openObservations = () => scopedObservations().filter((item) => item.status !== "Zamknięte");
   const lowMaterials = () => context.state.materials.filter((item) => item.quantity < item.min);
 
+  function minutesFromTime(value) {
+    if (!/^\d{2}:\d{2}$/.test(value || "")) return 0;
+    const [hours, minutes] = value.split(":").map(Number);
+    return hours * 60 + minutes;
+  }
+
+  function employeeNetMinutes(employee) {
+    if (employee.status !== "Obecny") return 0;
+    const start = minutesFromTime(employee.start);
+    let end = minutesFromTime(employee.end);
+    if (!start && !end) return 0;
+    if (end < start) end += 24 * 60;
+    const breaks = (employee.breaks || []).reduce((sum, item) => sum + Number(item.minutes || 0), 0);
+    return Math.max(0, end - start - breaks);
+  }
+
+  function formatMinutes(minutes) {
+    const safe = Math.max(0, Math.round(minutes));
+    return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, "0")}`;
+  }
+
+  function ensureTimeProfiles() {
+    const patterns = [
+      ["05:45", "14:00", [["09:00", 20]]],
+      ["06:00", "14:30", [["09:15", 20], ["12:15", 15]]],
+      ["06:15", "15:00", [["10:00", 30]]],
+      ["07:00", "15:30", [["10:00", 15], ["13:15", 20]]],
+      ["06:00", "13:45", [["09:30", 20]]],
+    ];
+    context.state.employees.forEach((employee, index) => {
+      if (employee.timeProfileReady) return;
+      const [start, end, breaks] = patterns[index % patterns.length];
+      if (employee.status === "Obecny") {
+        employee.start = start;
+        employee.end = end;
+        employee.breaks = breaks.map(([breakStart, minutes]) => ({ start: breakStart, minutes }));
+        employee.breakMinutes = employee.breaks.reduce((sum, item) => sum + item.minutes, 0);
+      } else {
+        employee.breaks = [];
+      }
+      employee.timeProfileReady = true;
+    });
+  }
+
   function metric(label, value, detail, tone = "green") {
     return `<article class="upgrade-metric ${tone}"><span>${label}</span><b>${value}</b><small>${detail}</small></article>`;
   }
@@ -120,6 +180,37 @@
       <div class="role-rights">${profile.rights.map((right) => `<span>✓ ${right}</span>`).join("")}</div>
       <div class="role-restriction"><i>i</i><span><small>OGRANICZENIE UPRAWNIEŃ</small><b>${profile.restriction}</b></span></div>
     </section>`;
+  }
+
+  function designStudioPanel() {
+    if (!context.state.review) return "";
+    const prefix = `${context.state.role}:${context.state.screen}:`;
+    const decisions = Object.entries(designState.decisions).filter(([key]) => key.startsWith(prefix));
+    const proposals = designState.proposals.filter((item) => item.role === context.state.role && item.screen === context.state.screen);
+    const count = (decision) => decisions.filter(([, value]) => value === decision).length;
+    return `<section class="design-studio" aria-label="Projektowanie ekranu"><header><div><span class="kicker">TRYB PROJEKTOWANIA</span><h2>Zdecyduj, co zostawić, zmienić, usunąć lub dodać</h2><p>Każdy blok na ekranie ma własne przyciski oceny. Decyzje zapisują się lokalnie i można je wyeksportować.</p></div><div class="design-summary"><span class="keep"><b>${count("keep")}</b><small>zostawić</small></span><span class="change"><b>${count("change")}</b><small>zmienić</small></span><span class="remove"><b>${count("remove")}</b><small>usunąć</small></span><span class="add"><b>${proposals.length}</b><small>dodać</small></span></div></header>
+      <form class="design-add-form" data-design-add-form><label><span>Propozycja nowego elementu</span><input name="proposal" required placeholder="np. dodać informację o nadgodzinach"></label><label><span>Miejsce</span><select name="location"><option>Pod podsumowaniem</option><option>Przed listą</option><option>Na końcu ekranu</option></select></label><button class="primary">+ Dodaj propozycję</button><button type="button" class="ghost" data-module-action="export-design">Eksport decyzji</button><button type="button" class="ghost" data-module-action="clear-design-screen">Wyczyść ekran</button></form>
+      ${proposals.length ? `<div class="design-proposals">${proposals.map((item) => `<article><i>+</i><span><b>${escapeHtml(item.text)}</b><small>${escapeHtml(item.location)} · propozycja do makiety</small></span><button data-design-remove-proposal="${item.id}" aria-label="Usuń propozycję">×</button></article>`).join("")}</div>` : ""}
+    </section>`;
+  }
+
+  function reviewBlockTitle(element, index) {
+    return element.querySelector("h1, h2, h3")?.textContent.trim() || element.querySelector(".kicker")?.textContent.trim() || `Blok ${index + 1}`;
+  }
+
+  function decorateReviewBlocks() {
+    if (!context.state.review) return;
+    const blocks = Array.from(context.app.querySelectorAll(".content > section:not(.operations-context):not(.role-focus-panel):not(.design-studio), .content > article"));
+    blocks.forEach((block, index) => {
+      const identity = Array.from(block.classList).find((name) => !["surface", "single-column"].includes(name)) || "section";
+      const key = `${context.state.role}:${context.state.screen}:${identity}-${index}`;
+      const decision = designState.decisions[key] || "";
+      block.classList.add("design-review-block");
+      if (decision) block.classList.add(`design-${decision}`);
+      block.dataset.designKey = key;
+      block.insertAdjacentHTML("afterbegin", `<div class="design-block-toolbar"><span><i>◆</i>${escapeHtml(reviewBlockTitle(block, index))}</span><div><button class="${decision === "keep" ? "active keep" : ""}" data-design-decision="keep" data-design-key="${escapeHtml(key)}">✓ Zostaw</button><button class="${decision === "change" ? "active change" : ""}" data-design-decision="change" data-design-key="${escapeHtml(key)}">↺ Zmień</button><button class="${decision === "remove" ? "active remove" : ""}" data-design-decision="remove" data-design-key="${escapeHtml(key)}">× Usuń</button></div></div>`);
+      if (decision === "remove") block.insertAdjacentHTML("beforeend", '<div class="design-remove-stamp">DO USUNIĘCIA</div>');
+    });
   }
 
   function dashboardPanel() {
@@ -178,10 +269,12 @@
     const present = state.employees.filter((employee) => employee.status === "Obecny").length;
     const unsettled = state.employees.filter((employee) => employee.status === "Nieustalony").length;
     const absent = state.employees.length - present - unsettled;
+    const netMinutes = state.employees.reduce((sum, employee) => sum + employeeNetMinutes(employee), 0);
+    const doubleBreaks = state.employees.filter((employee) => employee.status === "Obecny" && employee.breaks?.length === 2).length;
     return `<section class="module-upgrade attendance-upgrade">
-      <div class="upgrade-head"><div><span class="kicker">GOTOWOŚĆ OBSADY</span><h2>Obecność przed przydzieleniem pracy</h2><p>Najpierw wyjaśnij niepotwierdzone osoby, potem zatwierdź gotową obsadę.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="attendance-reminder">Przypomnij o potwierdzeniu</button><button class="primary" data-module-action="quick-nav" data-target="${nextTarget}">${nextLabel}</button></div></div>
-      <div class="upgrade-metrics">${metric("Obecni", present, `z ${state.employees.length} pokazanych`)}${metric("Nieustaleni", unsettled, "wymagają decyzji", unsettled ? "amber" : "green")}${metric("Nieobecni", absent, "urlop lub zwolnienie", "blue")}${metric("Gotowość", `${Math.round(present / state.employees.length * 100)}%`, "przykładowej brygady")}</div>
-      <div class="filter-row"><span>Filtr listy</span>${segmented("attendance", ["Wszyscy", "Obecni", "Nieustaleni", "Nieobecni"], featureState.attendanceFilter)}${featureState.reminderSent ? `<small class="filter-result">✓ przypomnienie zapisane</small>` : ""}</div>
+      <div class="upgrade-head"><div><span class="kicker">ELASTYCZNY CZAS PRACY</span><h2>Każda osoba może mieć inny czas i przerwy</h2><p>Start, koniec oraz jedna lub dwie przerwy są zapisywane indywidualnie. System automatycznie liczy czas netto.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="attendance-reminder">Przypomnij o potwierdzeniu</button><button class="primary" data-module-action="quick-nav" data-target="${nextTarget}">${nextLabel}</button></div></div>
+      <div class="upgrade-metrics">${metric("Obecni", present, `z ${state.employees.length} pokazanych`)}${metric("Czas netto", `${Math.floor(netMinutes / 60)} h ${netMinutes % 60} min`, "suma bieżącego podglądu", "blue")}${metric("Dwie przerwy", doubleBreaks, "indywidualne harmonogramy")}${metric("Nieustaleni", unsettled, unsettled ? "wymagają decyzji" : "statusy kompletne", unsettled ? "amber" : "green")}</div>
+      <div class="filter-row"><span>Filtr listy</span>${segmented("attendance", ["Wszyscy", "Obecni", "Nieustaleni", "Nieobecni"], featureState.attendanceFilter)}<small class="filter-result">${featureState.scheduleSaved ? "✓ harmonogram zapisany" : featureState.reminderSent ? "✓ przypomnienie zapisane" : `${absent} nieobecnych`}</small></div>
     </section>`;
   }
 
@@ -319,6 +412,27 @@
     roleGrid.insertAdjacentHTML("afterend", `<section class="login-capabilities"><span><i>01</i><b>Wybierz rolę</b><small>Zobacz dokładnie jej zakres decyzji.</small></span><span><i>02</i><b>Przejdź proces</b><small>Od planu przez ludzi do raportu.</small></span><span><i>03</i><b>Zapisz uwagi</b><small>Oceń, co pasuje przed wdrożeniem.</small></span></section>`);
   }
 
+  function renderFlexibleAttendance() {
+    if (context.state.screen !== "attendance") return;
+    const legacy = Array.from(context.app.querySelectorAll(".content > section.surface")).find((section) => section.querySelector(".table .tr.head"));
+    if (!legacy) return;
+    legacy.className = "time-roster-shell surface";
+    legacy.innerHTML = `<header class="time-roster-head"><div><span class="kicker">HARMONOGRAM INDYWIDUALNY</span><h3>Czas pracy i przerwy</h3><p>Każdy wpis może mieć inny start, koniec, liczbę przerw oraz ich długość.</p></div><div class="time-legend"><span><i class="green"></i>czas netto</span><span><i class="amber"></i>przerwy</span><span><i class="blue"></i>czas obecności</span></div></header>
+      <div class="time-roster">${context.state.employees.map((employee) => {
+        const present = employee.status === "Obecny";
+        const breaks = employee.breaks || [];
+        const net = employeeNetMinutes(employee);
+        const gross = present ? net + breaks.reduce((sum, item) => sum + Number(item.minutes || 0), 0) : 0;
+        return `<article class="time-worker-card ${present ? "" : "inactive"}">
+          <header><span class="person"><i class="avatar">${employee.name.split(" ").map((part) => part[0]).join("").slice(0, 2)}</i><span><b>${employee.name}</b><small>${employee.code}</small></span></span><strong>${present ? `${formatMinutes(net)} netto` : employee.status}</strong></header>
+          <div class="time-card-grid"><label><span>Status</span><select data-change="attendance" data-id="${employee.id}" aria-label="Status ${escapeHtml(employee.name)}">${["Obecny", "Urlop", "Zwolnienie", "Nieustalony"].map((status) => `<option ${employee.status === status ? "selected" : ""}>${status}</option>`).join("")}</select></label><label><span>Szablon</span><select data-time-template data-id="${employee.id}" ${present ? "" : "disabled"}><option value="custom">Indywidualnie</option><option value="early">05:45–14:00 · 1 przerwa</option><option value="double">06:00–14:30 · 2 przerwy</option><option value="late">07:00–15:30 · 1 przerwa</option></select></label><label><span>Start</span><input type="time" value="${present ? employee.start : ""}" data-time-field="start" data-id="${employee.id}" ${present ? "" : "disabled"}></label><label><span>Koniec</span><input type="time" value="${present ? employee.end : ""}" data-time-field="end" data-id="${employee.id}" ${present ? "" : "disabled"}></label><label><span>Liczba przerw</span><select data-break-count data-id="${employee.id}" ${present ? "" : "disabled"}><option value="1" ${breaks.length === 1 ? "selected" : ""}>1 przerwa</option><option value="2" ${breaks.length === 2 ? "selected" : ""}>2 przerwy</option></select></label></div>
+          <div class="break-editor">${present ? breaks.map((item, index) => `<div><span><b>Przerwa ${index + 1}</b><small>${item.start} · ${item.minutes} min</small></span><label><span>Od</span><input type="time" value="${item.start}" data-break-start data-break-index="${index}" data-id="${employee.id}"></label><label><span>Minuty</span><input type="number" min="5" max="90" step="5" value="${item.minutes}" data-break-minutes data-break-index="${index}" data-id="${employee.id}"></label></div>`).join("") : `<div class="break-empty">Przerwy nie są liczone przy statusie „${employee.status}”.</div>`}</div>
+          <footer><label><span>Notatka do czasu pracy</span><input value="${escapeHtml(employee.timeNote || "")}" placeholder="np. późniejszy przyjazd" data-time-note data-id="${employee.id}"></label><div class="time-total"><span><small>Obecność</small><b>${present ? formatMinutes(gross) : "—"}</b></span><i>−</i><span><small>Przerwy</small><b>${present ? `${breaks.reduce((sum, item) => sum + Number(item.minutes || 0), 0)} min` : "—"}</b></span><i>=</i><span class="net"><small>Do rozliczenia</small><b>${present ? formatMinutes(net) : "—"}</b></span></div></footer>
+        </article>`;
+      }).join("")}</div>
+      <footer class="time-roster-foot"><span><b>Automatyczne rozliczenie:</b> koniec − start − suma przerw. Obsługiwane są również zmiany przechodzące przez północ.</span><button class="primary" data-module-action="save-schedule">Zapisz harmonogram czasu</button></footer>`;
+  }
+
   function applyRolePermissions() {
     const { app, state } = context;
     const forbiddenActions = {
@@ -386,10 +500,13 @@
       loginEnhancement();
       return;
     }
+    ensureTimeProfiles();
     const pageHead = context.app.querySelector(".content > .page-head");
     if (!pageHead) return;
-    pageHead.insertAdjacentHTML("afterend", `${contextBar()}${roleFocusPanel()}${modulePanel()}`);
+    pageHead.insertAdjacentHTML("afterend", `${contextBar()}${roleFocusPanel()}${designStudioPanel()}${modulePanel()}`);
     applyRolePermissions();
+    renderFlexibleAttendance();
+    decorateReviewBlocks();
     applyFilters();
   }
 
@@ -397,7 +514,7 @@
     const selectors = {
       dashboard: ".facility, .event",
       planning: ".plan-card",
-      attendance: ".tr:not(.head)",
+      attendance: ".time-worker-card",
       tasks: ".task",
       productivity: ".rank-row",
       team: ".team-row",
@@ -498,6 +615,11 @@
       featureState.reminderSent = true;
       notify("Zapisano przypomnienie dla osób niepotwierdzonych");
     }
+    if (action === "save-schedule") {
+      state.employees.forEach((employee) => { employee.breakMinutes = (employee.breaks || []).reduce((sum, item) => sum + Number(item.minutes || 0), 0); });
+      featureState.scheduleSaved = true;
+      notify("Zapisano indywidualny czas pracy i przerwy");
+    }
     if (action === "advance-tasks") {
       activeTasks().filter((task) => task.status === "W trakcie").forEach((task) => { task.progress = Math.min(95, (task.progress || 0) + 10); });
       notify("Zaktualizowano postęp aktywnych prac");
@@ -590,21 +712,96 @@
       if (!state.approvedItems.includes("report")) state.approvedItems.push("report");
       notify("Raport zmiany został zatwierdzony");
     }
+    if (action === "export-design") {
+      exportJson("projekt-zmian-makiety.json", { decyzje: designState.decisions, propozycje: designState.proposals });
+      notify("Przygotowano eksport decyzji projektowych");
+    }
+    if (action === "clear-design-screen") {
+      const prefix = `${state.role}:${state.screen}:`;
+      Object.keys(designState.decisions).filter((key) => key.startsWith(prefix)).forEach((key) => delete designState.decisions[key]);
+      designState.proposals = designState.proposals.filter((item) => item.role !== state.role || item.screen !== state.screen);
+      saveDesignState();
+      render();
+    }
+  }
+
+  function handleTimeControl(control) {
+    const employee = context.state.employees.find((item) => item.id === Number(control.dataset.id));
+    if (!employee) return;
+    if (control.matches("[data-time-template]")) {
+      const templates = {
+        early: { start: "05:45", end: "14:00", breaks: [{ start: "09:00", minutes: 20 }] },
+        double: { start: "06:00", end: "14:30", breaks: [{ start: "09:15", minutes: 20 }, { start: "12:15", minutes: 15 }] },
+        late: { start: "07:00", end: "15:30", breaks: [{ start: "11:00", minutes: 30 }] },
+      };
+      if (templates[control.value]) Object.assign(employee, { ...templates[control.value], breaks: templates[control.value].breaks.map((item) => ({ ...item })) });
+    }
+    if (control.matches("[data-time-field]")) employee[control.dataset.timeField] = control.value;
+    if (control.matches("[data-break-count]")) {
+      const count = Number(control.value);
+      const current = employee.breaks || [];
+      while (current.length < count) current.push({ start: current.length ? "12:15" : "09:30", minutes: current.length ? 15 : 20 });
+      employee.breaks = current.slice(0, count);
+    }
+    if (control.matches("[data-break-start]")) employee.breaks[Number(control.dataset.breakIndex)].start = control.value;
+    if (control.matches("[data-break-minutes]")) employee.breaks[Number(control.dataset.breakIndex)].minutes = Number(control.value);
+    employee.breakMinutes = (employee.breaks || []).reduce((sum, item) => sum + Number(item.minutes || 0), 0);
+    featureState.scheduleSaved = false;
+    context.render();
   }
 
   function bindEvents() {
     if (eventsBound) return;
     eventsBound = true;
     context.app.addEventListener("click", (event) => {
+      const decisionButton = event.target.closest("[data-design-decision]");
+      if (decisionButton) {
+        designState.decisions[decisionButton.dataset.designKey] = decisionButton.dataset.designDecision;
+        saveDesignState();
+        context.render();
+        return;
+      }
+      const removeProposal = event.target.closest("[data-design-remove-proposal]");
+      if (removeProposal) {
+        designState.proposals = designState.proposals.filter((item) => item.id !== Number(removeProposal.dataset.designRemoveProposal));
+        saveDesignState();
+        context.render();
+        return;
+      }
       const button = event.target.closest("[data-module-action]");
       if (button && !button.disabled) handleAction(button);
     });
+    context.app.addEventListener("submit", (event) => {
+      const form = event.target.closest("[data-design-add-form]");
+      if (!form) return;
+      event.preventDefault();
+      const data = new FormData(form);
+      designState.proposals.push({ id: Date.now(), role: context.state.role, screen: context.state.screen, text: String(data.get("proposal") || "").trim(), location: data.get("location") });
+      saveDesignState();
+      context.render();
+    });
     context.app.addEventListener("input", (event) => {
-      if (!event.target.matches("[data-module-search]")) return;
-      featureState.search = event.target.value;
-      applyFilters();
+      if (event.target.matches("[data-module-search]")) {
+        featureState.search = event.target.value;
+        applyFilters();
+      }
+      if (event.target.matches("[data-time-note]")) {
+        const employee = context.state.employees.find((item) => item.id === Number(event.target.dataset.id));
+        if (employee) employee.timeNote = event.target.value;
+        featureState.scheduleSaved = false;
+      }
     });
     context.app.addEventListener("change", (event) => {
+      if (event.target.matches('[data-change="attendance"]')) {
+        featureState.scheduleSaved = false;
+        context.render();
+        return;
+      }
+      const timeControl = event.target.closest("[data-time-template], [data-time-field], [data-break-count], [data-break-start], [data-break-minutes]");
+      if (timeControl) {
+        handleTimeControl(timeControl);
+        return;
+      }
       const control = event.target.closest("[data-module-change]");
       if (!control) return;
       if (control.dataset.moduleChange === "work-date") featureState.workDate = control.value;

@@ -178,6 +178,25 @@
   function esc(value) { return String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char])); }
   function initials(name) { return name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase(); }
   function presentCount() { return state.employees.filter((employee) => employee.status === "Obecny").length; }
+  function timeMinutes(value) {
+    if (!/^\d{2}:\d{2}$/.test(value || "")) return 0;
+    const [hours, minutes] = value.split(":").map(Number);
+    return hours * 60 + minutes;
+  }
+  function employeeWorkedMinutes(employee) {
+    if (employee.status !== "Obecny") return 0;
+    if (!/^\d{2}:\d{2}$/.test(employee.start || "") || !/^\d{2}:\d{2}$/.test(employee.end || "")) return 0;
+    const start = timeMinutes(employee.start);
+    let end = timeMinutes(employee.end);
+    if (end < start) end += 24 * 60;
+    const breakMinutes = Array.isArray(employee.breaks)
+      ? employee.breaks.reduce((sum, item) => sum + Number(item.minutes || 0), 0)
+      : Number(employee.breakMinutes || 0);
+    return Math.max(0, end - start - breakMinutes);
+  }
+  function totalWorkedHours() {
+    return state.employees.reduce((sum, employee) => sum + employeeWorkedMinutes(employee), 0) / 60;
+  }
   function roleTasks() { return state.role === "Brygadzista" ? state.tasks.filter((task) => task.site === state.selectedSite) : state.tasks; }
   function roleTickets() { return state.role === "Brygadzista" ? state.tickets.filter((ticket) => ticket.site === state.selectedSite) : state.tickets; }
   function roleObservations() { return state.role === "Brygadzista" ? state.observations.filter((item) => item.site === state.selectedSite) : state.observations; }
@@ -345,7 +364,7 @@
   }
 
   function reports() {
-    const totalHours = presentCount() * 7.75; const block = blockers(); const entries = individualResults();
+    const totalHours = totalWorkedHours(); const block = blockers(); const entries = individualResults();
     return `${pageHead("ANALIZA OPERACYJNA", "Raport zmiany", "System agreguje obecność, wykonane prace, wyniki i wyjątki.", `<button class="secondary" data-action="export-report">↓ Eksport JSON</button> <button class="primary" data-action="open-close">${state.shiftClosed ? "Zobacz zamknięcie" : "Zamknij zmianę"}</button>`)}
       ${state.shiftClosed ? `<div class="success"><i>✓</i><p><b>Zmiana została zamknięta.</b> Raport jest gotowy do akceptacji kierownika.</p></div>` : block.length ? `<div class="warning"><i>!</i><p><b>Raport nie jest gotowy.</b> ${block[0]}</p><button class="ghost" data-action="open-close">Sprawdź</button></div>` : ""}
       <section class="metrics">${metric("Łączne godziny", totalHours.toFixed(2), "w widocznym okresie", "◷")}${metric("Aktywni pracownicy", presentCount(), "w brygadzie", "♙")}${metric("Wpisy osobowe", entries.length, "osoba + pełne miejsce + wózek", "✓")}${metric("Pozycje z uwagami", activeTickets(), "do weryfikacji", "!", "red")}</section>
@@ -458,7 +477,7 @@
     else if (action === "open-feedback") { state.feedbackOpen = true; render(); }
     else if (action === "close-feedback") { state.feedbackOpen = false; render(); }
     else if (action === "export-feedback") exportJson("uwagi-do-makiety.json", Object.entries(state.feedback).map(([key,value])=>({ ekran_i_rola:key, ocena:value.value==="fit"?"Pasuje":"Do zmiany", komentarz:value.note })));
-    else if (action === "export-report") exportJson("raport-zmiany-demo.json", { rola:state.role, zakres:state.role==="Brygadzista"?state.selectedSite:"zgodny z rolą", obecni:presentCount(), godziny:presentCount()*7.75, prace:roleTasks(), zgloszenia:roleTickets(), zamknieta:state.shiftClosed });
+    else if (action === "export-report") exportJson("raport-zmiany-demo.json", { rola:state.role, zakres:state.role==="Brygadzista"?state.selectedSite:"zgodny z rolą", obecni:presentCount(), godziny:Number(totalWorkedHours().toFixed(2)), prace:roleTasks(), zgloszenia:roleTickets(), zamknieta:state.shiftClosed });
   });
 
   app.addEventListener("change", (event) => {
@@ -466,7 +485,7 @@
     if (control.dataset.change === "role") { state.role = control.value; state.mobileNavOpen=false; if (!access[state.role].includes(state.screen)) state.screen = access[state.role][0]; history.replaceState(null,"",`#${state.screen}`); notify(`Widok roli: ${state.role}`); }
     if (control.dataset.change === "location-site") { const form=control.closest("form"); const naveSelect=form?.querySelector("[data-location-naves]"); const entranceSelect=form?.querySelector("[data-location-entrances]"); if(naveSelect)naveSelect.innerHTML=naveOptions(control.value); if(entranceSelect)entranceSelect.innerHTML=greenhouseSites.includes(control.value)?entranceOptions():optionList(["Brama 1","Brama 2","Wejście A","Wejście B"]); }
     if (control.dataset.change === "crop-nave") { state.selectedCropNave=control.value; const item=visibleCropObservations()[0]; if(item)focusCropObservation(item);else{state.selectedCropGreenhouseSide="Lewa od łącznika";state.selectedCropEntrance="Wjazd 1";state.selectedCropPassageSide="Lewa";state.selectedObservationId=null;} render(); }
-    if (control.dataset.change === "attendance") { const employee = state.employees.find((item)=>item.id===Number(control.dataset.id)); employee.status = control.value; employee.start = control.value === "Obecny" ? "06:00" : "—"; employee.end = control.value === "Obecny" ? "14:15" : "—"; employee.breakMinutes = control.value === "Obecny" ? 30 : 0; render(); }
+    if (control.dataset.change === "attendance") { const employee = state.employees.find((item)=>item.id===Number(control.dataset.id)); const present=control.value === "Obecny"; employee.status = control.value; employee.start = present ? "06:00" : "—"; employee.end = present ? "14:15" : "—"; employee.breaks = present ? [{start:"09:30",minutes:30}] : []; employee.breakMinutes = present ? 30 : 0; render(); }
     if (control.dataset.change === "ticket-owner") { const ticket=state.tickets.find((item)=>item.id===Number(control.dataset.id)); const previous=ticket.owner; ticket.owner=control.value; addTicketEvent(ticket,"Zmieniono odpowiedzialnego",`${previous} → ${ticket.owner}`); notify("Odpowiedzialny został zmieniony"); }
   });
 
