@@ -397,3 +397,33 @@ class PrototypePageTests(SimpleTestCase):
             ".v5-assignment-warning",
         ]:
             self.assertIn(marker, styles)
+
+    def test_plan_execution_group_moves_location_ranges_and_handover_are_integrated(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        app_script = (static_dir / "app.js").read_text(encoding="utf-8")
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        styles = (static_dir / "visual-system-v4.css").read_text(encoding="utf-8")
+        for marker in ["naveEnd", "item.naveEnd", 'data.get("naveEnd")']:
+            self.assertIn(marker, app_script)
+        for marker in [
+            "function planExecutionPanel()",
+            "function bulkAssignmentPanel()",
+            "function handoverPanel()",
+            "function enhanceLocationForms()",
+            'data-v6-form="bulk-assignment"',
+            'data-v6-form="handover"',
+            "start-plan-item",
+            "focus-plan-execution",
+            "download-handover",
+            "data-v6-location-range",
+            "data-v6-employee-preset",
+        ]:
+            self.assertIn(marker, enhancements)
+        for marker in [
+            ".v6-plan-execution",
+            ".v6-bulk-assignment",
+            ".v6-location-tools",
+            ".v6-employee-tools",
+            ".v6-handover",
+        ]:
+            self.assertIn(marker, styles)

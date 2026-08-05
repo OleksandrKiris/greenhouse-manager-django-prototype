@@ -21,6 +21,7 @@
     protectionTaskCreated: false,
     materialOrderCreated: false,
     reportApproved: false,
+    handover: null,
     scheduleSaved: false,
     expandedTimeCards: [],
     listDensity: "compact",
@@ -62,7 +63,7 @@
   }
 
   function saveFeaturePreferences() {
-    const allowed = ["workDate", "shift", "scope", "attendanceFilter", "taskFilter", "productivityUnit", "teamFilter", "cropFilter", "listDensity", "listLimits"];
+    const allowed = ["workDate", "shift", "scope", "attendanceFilter", "taskFilter", "productivityUnit", "teamFilter", "cropFilter", "listDensity", "listLimits", "handover"];
     const snapshot = Object.fromEntries(allowed.map((key) => [key, featureState[key]]));
     try { localStorage.setItem(FEATURE_PREFERENCES_KEY, JSON.stringify(snapshot)); } catch (_) { /* Preferences remain optional. */ }
   }
@@ -404,6 +405,71 @@
     return `<section class="v5-exception-center surface" aria-label="Centrum wyjątków"><header><div><span class="kicker">WYMAGA DZIAŁANIA</span><h2>${issues.length ? `${issues.length} typów wyjątków do sprawdzenia` : "Brak wyjątków blokujących zmianę"}</h2><p>${issues.length ? "Każdy przycisk prowadzi bezpośrednio do modułu, w którym można rozwiązać problem." : "System nie wykrył braków wymagających reakcji w Twoim zakresie."}</p></div><span class="v5-exception-total ${issues.length ? "attention" : "ready"}"><b>${issues.reduce((sum, issue) => sum + issue[2], 0)}</b><small>rekordów</small></span></header>${issues.length ? `<div class="v5-exception-list">${issues.map(([screen, title, count, detail, tone]) => `<button class="${tone}" data-module-action="quick-nav" data-target="${screen}"><i>${count}</i><span><b>${title}</b><small>${detail}</small></span><em>Otwórz →</em></button>`).join("")}</div>` : `<div class="v5-exception-ready"><i>✓</i><span><b>Możesz kontynuować bieżący etap.</b><small>Nowe wyjątki pojawią się tutaj automatycznie.</small></span></div>`}</section>`;
   }
 
+  function locationRangeLabel(item) {
+    const nave = item.naveEnd && item.naveEnd !== item.nave ? `${item.nave}–${item.naveEnd}` : item.nave;
+    return [item.site, item.greenhouseSide, nave, item.entrance, item.passageSide].filter(Boolean).join(" · ");
+  }
+
+  function taskForPlan(plan) {
+    return context.state.tasks.find((task) => task.planId === plan.id)
+      || context.state.tasks.find((task) => task.site === plan.site && task.title === plan.title && task.nave === plan.nave);
+  }
+
+  function executionSnapshot(plan) {
+    const task = taskForPlan(plan);
+    const finished = task?.status === "Zakończone";
+    const blocked = task?.status === "Wstrzymane" || !task && plan.assigned < plan.need;
+    const rate = finished && task.hours
+      ? `${(task.result / task.hours).toFixed(task.unit === "kg" ? 0 : 2)} ${task.unit}/h`
+      : task ? `${task.progress || 0}%` : "0%";
+    const plannedEnd = String(plan.time || "").split(/[–-]/).pop() || "—";
+    const forecast = finished ? "Zakończono" : blocked ? "Wymaga decyzji" : task && (task.progress || 0) < 50 ? `ryzyko po ${plannedEnd}` : task ? `około ${plannedEnd}` : "Nie rozpoczęto";
+    return {
+      task,
+      rate,
+      forecast,
+      tone: finished ? "done" : blocked ? "blocked" : task ? "active" : "pending",
+      status: finished ? "Wykonane" : blocked ? (task?.status || "Brak obsady") : task ? "W realizacji" : "Do rozpoczęcia",
+    };
+  }
+
+  function planExecutionPanel() {
+    const plan = activePlan();
+    const snapshots = plan.map((item) => ({ item, execution: executionSnapshot(item) }));
+    const started = snapshots.filter(({ execution }) => execution.task).length;
+    const finished = snapshots.filter(({ execution }) => execution.task?.status === "Zakończone").length;
+    const risks = snapshots.filter(({ execution }) => execution.tone === "blocked").length;
+    return `<section class="v6-plan-execution" aria-label="Plan kontra wykonanie"><header><div><span class="kicker">PLAN KONTRA WYKONANIE</span><h3>Od razu widać różnicę między założeniem a realizacją</h3><p>Obsada, wynik, postęp i przewidywane zakończenie są połączone z właściwą pracą.</p></div><div class="v6-plan-execution-summary"><span><b>${plan.length}</b><small>zaplanowano</small></span><span><b>${started}</b><small>rozpoczęto</small></span><span><b>${finished}</b><small>wykonano</small></span><span class="${risks ? "attention" : ""}"><b>${risks}</b><small>ryzyka</small></span></div></header><div class="v6-plan-execution-list">${snapshots.map(({ item, execution }) => `<article class="${execution.tone}"><i></i><div class="v6-execution-work"><b>${escapeHtml(item.title)}</b><small>${escapeHtml(locationRangeLabel(item))}</small></div><span><small>Plan</small><b>${item.target} ${item.unit} · ${item.need} os.</b></span><span><small>Wykonanie</small><b>${execution.rate} · ${execution.task?.people?.length || 0} os.</b></span><span><small>Przewidywanie</small><b>${execution.forecast}</b></span><em>${execution.status}</em>${execution.task ? `<button class="secondary" data-module-action="focus-plan-execution" data-task-id="${execution.task.id}" data-task-title="${escapeHtml(execution.task.title)}">Otwórz pracę</button>` : context.state.role === "Brygadzista" ? `<button class="primary" data-module-action="start-plan-item" data-plan-id="${item.id}">Rozpocznij</button>` : `<span class="v6-read-only">Czeka na brygadzistę</span>`}</article>`).join("") || `<div class="v6-empty">Brak pozycji planu w wybranym zakresie.</div>`}</div></section>`;
+  }
+
+  function workGroups() {
+    const present = context.state.employees.filter((employee) => employee.status === "Obecny");
+    const middle = Math.ceil(present.length / 2);
+    return [
+      { id: "free", label: "Wolni teraz", people: resourceState().availablePeople.map((employee) => employee.name) },
+      { id: "team-a", label: "Brygada A", people: present.slice(0, middle).map((employee) => employee.name) },
+      { id: "team-b", label: "Brygada B", people: present.slice(middle).map((employee) => employee.name) },
+    ];
+  }
+
+  function bulkAssignmentPanel() {
+    const tasks = activeTasks();
+    const groups = workGroups();
+    if (context.state.role === "Kierownik") return `<section class="v6-bulk-assignment read-only"><div><span class="kicker">OPERACJE GRUPOWE</span><h3>Brygadzista przenosi ludzi, kierownik widzi rezultat</h3><p>Zmiany obsady są widoczne w aktywnych pracach i kontroli konfliktów.</p></div><span><b>${groups.length}</b><small>gotowe grupy robocze</small></span></section>`;
+    return `<form class="v6-bulk-assignment" data-v6-form="bulk-assignment"><header><div><span class="kicker">OPERACJE GRUPOWE</span><h3>Przenieś całą grupę do innej pracy</h3><p>Jedna operacja usuwa ludzi z poprzednich aktywnych prac i zapisuje ich przy nowym zadaniu.</p></div><span><b>${tasks.length}</b><small>aktywnych prac</small></span></header><div><label><span>Grupa</span><select name="group">${groups.map((group) => `<option value="${group.id}">${group.label} · ${group.people.length} os.</option>`).join("")}</select></label><label><span>Praca docelowa</span><select name="task" ${tasks.length ? "" : "disabled"}>${tasks.map((task) => `<option value="${task.id}">${escapeHtml(task.title)} · ${escapeHtml(task.nave)} · ${escapeHtml(task.foreman)}</option>`).join("")}</select></label><label><span>Sposób</span><select name="mode"><option value="move">Przenieś z innych prac</option><option value="free">Dodaj tylko wolnych</option></select></label><button class="primary" ${tasks.length ? "" : "disabled"}>Zastosuj do grupy</button></div></form>`;
+  }
+
+  function handoverPanel() {
+    if (!["Brygadzista", "Kierownik"].includes(context.state.role)) return "";
+    const saved = featureState.handover;
+    const tasks = activeTasks();
+    const tickets = openTickets();
+    const carts = [...new Set(tasks.map((task) => task.cart).filter(Boolean))];
+    if (context.state.role === "Kierownik") return `<section class="v6-handover ${saved ? "saved" : "waiting"}"><header><div><span class="kicker">PRZEKAZANIE ZMIANY</span><h3>${saved ? `${escapeHtml(saved.site)} przekazała zmianę` : "Oczekiwanie na przekazanie brygadzisty"}</h3><p>${saved ? `${escapeHtml(saved.author)} → ${escapeHtml(saved.recipient)} · ${escapeHtml(saved.savedAt)}` : "Po zapisaniu kierownik zobaczy niezakończone prace, problemy, wózki i notatkę."}</p></div><span><b>${saved ? "✓" : "…"}</b><small>${saved ? "otrzymano" : "oczekuje"}</small></span></header>${saved ? `<div class="v6-handover-readout"><span><small>Prace do kontynuacji</small><b>${saved.tasks.length}</b></span><span><small>Otwarte problemy</small><b>${saved.tickets.length}</b></span><span><small>Wózki w użyciu</small><b>${saved.carts.length}</b></span><p><small>Notatka brygadzisty</small><b>${escapeHtml(saved.note)}</b></p></div>` : ""}</section>`;
+    const foremen = context.siteResponsibility.find((item) => item.site === context.state.selectedSite)?.foremen || ["Tomasz Wójcik"];
+    return `<details class="v6-handover ${saved ? "saved" : "waiting"}" ${saved ? "" : "open"}><summary><div><span class="kicker">PRZEKAZANIE ZMIANY</span><h3>${saved ? "Przekazanie zapisane" : "Przygotuj następną zmianę"}</h3><p>${saved ? `${escapeHtml(saved.author)} → ${escapeHtml(saved.recipient)} · ${escapeHtml(saved.savedAt)}` : "System automatycznie zbiera aktywne prace, problemy i używane wózki."}</p></div><span><b>${saved ? "✓" : tasks.length + tickets.length}</b><small>${saved ? "zapisano" : "pozycji"}</small></span></summary><form data-v6-form="handover"><div class="v6-handover-auto"><span><small>Niezakończone prace</small><b>${tasks.length}</b><em>${tasks.map((task) => task.title).join(" · ") || "brak"}</em></span><span><small>Otwarte problemy</small><b>${tickets.length}</b><em>${tickets.filter((ticket) => ticket.priority === "Krytyczny").length} krytycznych</em></span><span><small>Wózki pozostające w pracy</small><b>${carts.length}</b><em>${carts.join(" · ") || "brak"}</em></span></div><div class="v6-handover-fields"><label><span>Następna zmiana</span><select name="nextShift"><option>Popołudniowa · 14:00–22:00</option><option>Nocna · 22:00–06:00</option><option>Poranna · 06:00–14:00</option></select></label><label><span>Przekaż do</span><select name="recipient">${foremen.map((name) => `<option>${escapeHtml(name)}</option>`).join("")}</select></label><label class="wide"><span>Najważniejsza informacja dla następnej zmiany</span><textarea name="note" rows="3" required placeholder="Co trzeba dokończyć, sprawdzić lub zabezpieczyć?">${escapeHtml(saved?.note || "Dokończyć aktywne prace i sprawdzić otwarte zgłoszenia przed rozpoczęciem kolejnego zakresu.")}</textarea></label></div><footer><small>Zapis obejmie dokładne miejsca, osoby odpowiedzialne i aktualny status.</small><div>${saved ? `<button type="button" class="secondary" data-module-action="download-handover">Pobierz przekazanie</button>` : ""}<button class="primary">${saved ? "Aktualizuj przekazanie" : "Zapisz przekazanie"}</button></div></footer></form></details>`;
+  }
+
   function designStudioPanel() {
     if (!context.state.review) return "";
     const prefix = `${context.state.role}:${context.state.screen}:`;
@@ -515,6 +581,7 @@
       <div class="upgrade-metrics">${metric("Pozycje", plan.length, "dla wybranego obiektu")}${metric("Brakujące osoby", missing, missing ? "do przydzielenia" : "obsada kompletna", missing ? "amber" : "green")}${metric("Wysoki priorytet", high, "pozycji do omówienia", high ? "red" : "green")}${metric("Publikacja", published ? "Gotowa" : "Robocza", published ? "brygadziści widzą plan" : "wymaga publikacji", published ? "green" : "blue")}</div>
       <div class="publication-checklist"><span class="${plan.length ? "done" : ""}"><i>${plan.length ? "✓" : "1"}</i><b>Zadania</b><small>${plan.length ? `${plan.length} pozycji` : "brak pozycji"}</small></span><span class="${missing === 0 ? "done" : "warn"}"><i>${missing === 0 ? "✓" : "2"}</i><b>Obsada</b><small>${missing ? `brakuje ${missing} os.` : "kompletna"}</small></span><span class="${plan.every((item) => item.foreman && item.chief) ? "done" : ""}"><i>✓</i><b>Odpowiedzialność</b><small>główny + realizujący</small></span><span class="${published ? "done" : ""}"><i>${published ? "✓" : "4"}</i><b>Publikacja</b><small>${featureState.planValidated ? "sprawdzono teraz" : published ? "opublikowany" : "oczekuje"}</small></span></div>
       <div class="v5-plan-resources ${conflicts ? "attention" : "ready"}"><span><small>Dostępni teraz</small><b>${resources.availablePeople.length} osób · ${resources.freeCarts} wózków</b></span><span><small>Konflikty bieżących przydziałów</small><b>${conflicts || "brak"}</b></span><button class="secondary" data-nav="tasks">Sprawdź zasoby w Pracach →</button></div>
+      ${planExecutionPanel()}
       ${featureState.planCopied ? `<div class="inline-confirmation">✓ Utworzono roboczą kopię planu na następny dzień. Można ją dalej redagować.</div>` : featureState.planAcknowledged ? `<div class="inline-confirmation">✓ Brygadzista potwierdził zapoznanie z bieżącą wersją planu.</div>` : ""}
     </section>`;
   }
@@ -549,6 +616,7 @@
       <div class="upgrade-metrics">${metric("W trakcie", running.length, "aktywnych prac")}${metric("Wstrzymane", paused.length, paused.length ? "wymagają decyzji" : "brak blokad", paused.length ? "red" : "green")}${metric("Zakończone", complete.length, "z pełnym wynikiem", "blue")}${metric("Zaangażowani", people, "unikalnych osób")}</div>
       <div class="filter-row"><span>Status prac</span>${segmented("tasks", ["Wszystkie", "W trakcie", "Wstrzymane", "Zakończone"], featureState.taskFilter)}</div>
       <section class="v5-resource-board"><header><div><span class="kicker">ASYSTENT ZASOBÓW</span><h3>Ludzie i wózki bez podwójnych przydziałów</h3></div><span class="${conflictCount ? "attention" : "ready"}">${conflictCount ? `${conflictCount} konflikty` : "✓ Bez konfliktów"}</span></header><div class="v5-resource-metrics"><span><small>Wolni pracownicy</small><b>${resources.availablePeople.length}</b></span><span><small>Przypisani</small><b>${resources.peopleAssignments.size}</b></span><span><small>Wolne wózki</small><b>${resources.freeCarts}/12</b></span><span><small>Konflikty</small><b>${conflictCount}</b></span></div>${conflictCount ? `<div class="v5-conflict-list">${resources.peopleConflicts.map(([person, assignments]) => `<span><i>!</i><b>${escapeHtml(person)}</b><small>${assignments.map((task) => task.title).join(" · ")}</small></span>`).join("")}${resources.cartConflicts.map(([cart, assignments]) => `<span><i>!</i><b>${escapeHtml(cart)}</b><small>${assignments.map((task) => task.title).join(" · ")}</small></span>`).join("")}</div>` : `<p class="v5-resource-ok">Każda osoba i każdy wózek ma tylko jedno aktywne przypisanie.</p>`}<footer><button class="secondary" data-module-action="show-resource-conflicts" ${conflictCount ? "" : "disabled"}>Pokaż konflikty</button>${context.state.role !== "Kierownik" ? `<button class="primary" data-action="new-task">Przydziel pracę</button>` : `<span>Kierownik widzi konflikty; brygadzista zmienia obsadę.</span>`}</footer></section>
+      ${bulkAssignmentPanel()}
     </section>`;
   }
 
@@ -649,7 +717,7 @@
       <div class="upgrade-head"><div><span class="kicker">KOMPLETNOŚĆ ZMIANY</span><h2>${canApprove ? "Raport gotowy do zatwierdzenia" : "Raport z Twojego zakresu"}</h2><p>${canApprove ? "Przed zatwierdzeniem system sprawdza obecność, wyniki, osoby, lokalizacje i otwarte ryzyka." : "Eksport obejmuje tylko dane dostępne dla Twojej roli i obiektu."}</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="download-full-report">Eksport mojego zakresu</button>${canApprove ? `<button class="primary" data-module-action="approve-report" ${!ready ? "disabled" : ""}>${featureState.reportApproved ? "✓ Zatwierdzono" : "Zatwierdź raport"}</button>` : ""}</div></div>
       <div class="upgrade-metrics">${metricsHtml}</div>
       <div class="report-readiness">${readinessHtml}</div>
-    </section>`;
+    </section>${handoverPanel()}`;
   }
 
   function modulePanel() {
@@ -824,10 +892,12 @@
       const skills = ["Zbiór", "Liście", "Zawieszki", "Wózek", "Kontrola", "Prace rzędowe"];
       if (picker) {
         picker.insertAdjacentHTML("beforebegin", `<section class="v5-assignment-summary"><span><small>Dostępni pracownicy</small><b>${resources.availablePeople.length}</b></span><span><small>Wybrano</small><b data-v5-selected>0</b></span><span><small>Wolne wózki</small><b>${resources.freeCarts}</b></span><span><small>Aktywne konflikty</small><b>${resources.peopleConflicts.length + resources.cartConflicts.length}</b></span></section>`);
+        picker.insertAdjacentHTML("beforebegin", `<section class="v6-employee-tools"><div><span>Gotowe zaznaczenie</span><button type="button" data-v6-employee-preset="free">Wolni</button><button type="button" data-v6-employee-preset="team-a">Brygada A</button><button type="button" data-v6-employee-preset="team-b">Brygada B</button><button type="button" data-v6-employee-preset="clear">Wyczyść</button></div><label><span>Kompetencja</span><select data-v6-skill-filter><option value="all">Wszystkie</option>${skills.map((skill) => `<option>${skill}</option>`).join("")}</select></label></section>`);
         const labels = Array.from(picker.querySelectorAll(":scope > label"));
         labels.forEach((label, index) => {
           const input = label.querySelector('input[name="employees"]');
           const assignments = resources.peopleAssignments.get(input?.value) || [];
+          label.dataset.skill = skills[index % skills.length];
           label.dataset.activeAssignments = String(assignments.length);
           label.classList.toggle("busy", assignments.length > 0);
           if (assignments.length && input) {
@@ -877,6 +947,58 @@
     }
   }
 
+  function locationRecordForForm(form) {
+    if (form.dataset.form === "finish-task") return context.state.tasks.find((item) => item.id === context.state.selectedTask);
+    if (form.dataset.form === "new-plan") return context.state.plan.find((item) => item.id === context.state.selectedPlanId);
+    return null;
+  }
+
+  function recentLocations() {
+    const scope = context.state.role === "Brygadzista" ? context.state.selectedSite : context.state.selectedPlanSite;
+    const unique = new Map();
+    [...context.state.tasks, ...context.state.plan].filter((item) => item.site === scope).forEach((item) => {
+      const key = [item.site, item.greenhouseSide, item.nave, item.naveEnd, item.entrance, item.passageSide].join("|");
+      if (!unique.has(key)) unique.set(key, item);
+    });
+    return [...unique.values()].slice(0, 3);
+  }
+
+  function updateLocationAssistant(form) {
+    const start = form.querySelector('select[name="nave"]');
+    const end = form.querySelector('select[name="naveEnd"]');
+    if (!start || !end) return;
+    const options = Array.from(start.options, (option) => option.value);
+    if (!Array.from(end.options).some((option) => option.value === end.value)) end.innerHTML = start.innerHTML;
+    const startIndex = Math.max(0, options.indexOf(start.value));
+    const endIndex = options.indexOf(end.value);
+    if (endIndex < startIndex) end.value = start.value;
+    const site = form.querySelector('[name="site"]')?.value;
+    const greenhouseSide = form.querySelector('[name="greenhouseSide"]')?.value;
+    const entrance = form.querySelector('[name="entrance"]')?.value;
+    const passageSide = form.querySelector('[name="passageSide"]')?.value;
+    const preview = form.querySelector("[data-v6-location-preview]");
+    if (preview) preview.innerHTML = `<small>WYBRANY ZAKRES</small><b>${escapeHtml([site, greenhouseSide, start.value === end.value ? start.value : `${start.value}–${end.value}`, entrance, passageSide].filter(Boolean).join(" → "))}</b>`;
+  }
+
+  function enhanceLocationForms() {
+    const selector = 'form[data-form="new-task"], form[data-form="new-plan"], form[data-form="finish-task"]';
+    context.app.querySelectorAll(selector).forEach((form) => {
+      if (form.classList.contains("v6-location-enhanced")) return;
+      const location = form.querySelector(".location-form");
+      const start = location?.querySelector('select[name="nave"]');
+      if (!location || !start) return;
+      form.classList.add("v6-location-enhanced");
+      const record = locationRecordForForm(form);
+      start.closest("label")?.insertAdjacentHTML("afterend", `<label class="field v6-nave-end"><span>Nawa końcowa</span><select name="naveEnd" data-v6-nave-end>${start.innerHTML}</select></label>`);
+      const end = form.querySelector('select[name="naveEnd"]');
+      if (end) end.value = record?.naveEnd || start.value;
+      const recent = recentLocations();
+      location.insertAdjacentHTML("beforebegin", `<section class="v6-location-tools"><div><span>Zakres naw</span><button type="button" data-v6-location-range="single">Jedna nawa</button><button type="button" data-v6-location-range="five">+ 5 naw</button><button type="button" data-v6-location-range="end">Do końca etapu</button></div>${recent.length ? `<div class="v6-recent-locations"><span>Ostatnie miejsca</span>${recent.map((item, index) => `<button type="button" data-v6-location-recent="${index}" data-site="${escapeHtml(item.site)}" data-greenhouse-side="${escapeHtml(item.greenhouseSide)}" data-nave="${escapeHtml(item.nave)}" data-nave-end="${escapeHtml(item.naveEnd || item.nave)}" data-entrance="${escapeHtml(item.entrance)}" data-passage-side="${escapeHtml(item.passageSide)}"><b>${escapeHtml(item.naveEnd && item.naveEnd !== item.nave ? `${item.nave}–${item.naveEnd}` : item.nave)}</b><small>${escapeHtml(item.entrance)} · ${escapeHtml(item.passageSide)}</small></button>`).join("")}</div>` : ""}</section>`);
+      location.insertAdjacentHTML("afterend", `<div class="v6-location-preview" data-v6-location-preview></div>`);
+      updateLocationAssistant(form);
+    });
+  }
+
   function injectEnhancements() {
     if (!context.state.loggedIn) {
       loginEnhancement();
@@ -892,6 +1014,7 @@
     renderFlexibleAttendance();
     simplifyDashboard();
     enhanceTaskAssignmentForm();
+    enhanceLocationForms();
     decorateReviewBlocks();
     renderLargeListControls();
     applyFilters();
@@ -1053,6 +1176,48 @@
       render();
       return;
     }
+    if (action === "focus-plan-execution") {
+      state.selectedTask = Number(button.dataset.taskId);
+      featureState.pendingTaskFocus = button.dataset.taskTitle || "";
+      navigate("tasks");
+      return;
+    }
+    if (action === "start-plan-item") {
+      const plan = state.plan.find((item) => item.id === Number(button.dataset.planId));
+      if (!plan) return notify("Nie znaleziono pozycji planu");
+      const resources = resourceState();
+      const people = resources.availablePeople.slice(0, plan.need).map((employee) => employee.name);
+      if (!people.length) return notify("Brak wolnych pracowników — najpierw przenieś grupę w module Prace");
+      const freeCart = Array.from({ length: 12 }, (_, index) => `WZ-${String(index + 1).padStart(2, "0")}`).find((cart) => !resources.cartAssignments.has(cart)) || "—";
+      const task = {
+        id: Date.now(),
+        planId: plan.id,
+        title: plan.title,
+        site: plan.site,
+        greenhouseSide: plan.greenhouseSide,
+        nave: plan.nave,
+        naveEnd: plan.naveEnd || plan.nave,
+        entrance: plan.entrance,
+        passageSide: plan.passageSide,
+        row: plan.nave.replace(/^N/, "R"),
+        side: plan.passageSide,
+        cart: freeCart,
+        foreman: plan.foreman,
+        people,
+        status: "W trakcie",
+        unit: plan.unit.startsWith("kg") ? "kg" : "rz.",
+        progress: 0,
+        contributions: [],
+      };
+      state.tasks.push(task);
+      plan.assigned = people.length;
+      plan.status = people.length >= plan.need ? "Gotowe" : `Brak ${plan.need - people.length} os.`;
+      state.selectedTask = task.id;
+      featureState.pendingTaskFocus = task.title;
+      notify(`Rozpoczęto plan: ${people.length} os. · ${freeCart}`);
+      navigate("tasks");
+      return;
+    }
     if (action === "download-tasks") {
       exportJson("prace-biezace-demo.json", scopedTasks());
       notify("Przygotowano eksport prac i odpowiedzialności");
@@ -1146,6 +1311,11 @@
       if (!state.approvedItems.includes("report")) state.approvedItems.push("report");
       notify("Raport zmiany został zatwierdzony");
     }
+    if (action === "download-handover") {
+      if (!featureState.handover) return notify("Najpierw zapisz przekazanie zmiany");
+      exportJson("przekazanie-zmiany-demo.json", featureState.handover);
+      notify("Przygotowano przekazanie zmiany");
+    }
     if (action === "export-design") {
       exportJson("projekt-zmian-makiety.json", { decyzje: designState.decisions, propozycje: designState.proposals });
       notify("Przygotowano eksport decyzji projektowych");
@@ -1191,10 +1361,92 @@
     context.render();
   }
 
+  function handleFeatureForm(form) {
+    const data = new FormData(form);
+    if (form.dataset.v6Form === "bulk-assignment") {
+      const group = workGroups().find((item) => item.id === data.get("group"));
+      const target = context.state.tasks.find((task) => task.id === Number(data.get("task")));
+      if (!group || !target) return context.notify("Wybierz grupę i pracę docelową");
+      let people = group.people;
+      if (data.get("mode") === "free") {
+        const free = new Set(resourceState().availablePeople.map((employee) => employee.name));
+        people = people.filter((person) => free.has(person));
+      } else {
+        activeTasks().filter((task) => task.id !== target.id).forEach((task) => { task.people = (task.people || []).filter((person) => !people.includes(person)); });
+      }
+      people.forEach((person) => { if (!target.people.includes(person)) target.people.push(person); });
+      target.updatedAt = "teraz";
+      context.notify(people.length ? `Przypisano grupę: ${people.length} os. → ${target.title}` : "W wybranej grupie nie ma wolnych osób");
+      return;
+    }
+    if (form.dataset.v6Form === "handover") {
+      const tasks = activeTasks();
+      const tickets = openTickets();
+      const site = context.state.selectedSite;
+      const author = context.siteResponsibility.find((item) => item.site === site)?.chief || "Brygadzista zmiany";
+      featureState.handover = {
+        site,
+        date: featureState.workDate,
+        shift: featureState.shift,
+        nextShift: data.get("nextShift"),
+        author,
+        recipient: data.get("recipient"),
+        note: String(data.get("note") || "").trim(),
+        savedAt: `${featureState.workDate} · teraz`,
+        tasks: tasks.map((task) => ({ id: task.id, title: task.title, location: locationRangeLabel(task), foreman: task.foreman, people: [...task.people], cart: task.cart, status: task.status, progress: task.progress })),
+        tickets: tickets.map((ticket) => ({ id: ticket.id, title: ticket.title, location: locationRangeLabel(ticket), owner: ticket.owner, priority: ticket.priority, status: ticket.status })),
+        carts: [...new Set(tasks.map((task) => task.cart).filter(Boolean))],
+      };
+      saveFeaturePreferences();
+      context.notify("Przekazanie zmiany zapisane i widoczne dla kierownika");
+    }
+  }
+
   function bindEvents() {
     if (eventsBound) return;
     eventsBound = true;
     context.app.addEventListener("click", (event) => {
+      const employeePreset = event.target.closest("[data-v6-employee-preset]");
+      if (employeePreset) {
+        const form = employeePreset.closest('form[data-form="new-task"]');
+        const labels = Array.from(form?.querySelectorAll('.employee-picker > label') || []).filter((label) => !label.querySelector("input")?.disabled);
+        const middle = Math.ceil(labels.length / 2);
+        labels.forEach((label, index) => {
+          const preset = employeePreset.dataset.v6EmployeePreset;
+          label.querySelector("input").checked = preset === "free" || preset === "team-a" && index < middle || preset === "team-b" && index >= middle;
+          if (preset === "clear") label.querySelector("input").checked = false;
+        });
+        updateSmartAssignmentSummary(form);
+        return;
+      }
+      const rangeButton = event.target.closest("[data-v6-location-range]");
+      if (rangeButton) {
+        const form = rangeButton.closest("form");
+        const start = form?.querySelector('select[name="nave"]');
+        const end = form?.querySelector('select[name="naveEnd"]');
+        if (!start || !end) return;
+        const options = Array.from(start.options, (option) => option.value);
+        const startIndex = Math.max(0, options.indexOf(start.value));
+        if (rangeButton.dataset.v6LocationRange === "single") end.value = start.value;
+        if (rangeButton.dataset.v6LocationRange === "five") end.value = options[Math.min(options.length - 1, startIndex + 4)];
+        if (rangeButton.dataset.v6LocationRange === "end") end.value = options[options.length - 1];
+        updateLocationAssistant(form);
+        return;
+      }
+      const recentButton = event.target.closest("[data-v6-location-recent]");
+      if (recentButton) {
+        const form = recentButton.closest("form");
+        const setValue = (name, value) => { const control = form?.querySelector(`[name="${name}"]`); if (control && value) control.value = value; return control; };
+        const site = setValue("site", recentButton.dataset.site);
+        site?.dispatchEvent(new Event("change", { bubbles: true }));
+        setValue("greenhouseSide", recentButton.dataset.greenhouseSide);
+        setValue("nave", recentButton.dataset.nave);
+        setValue("naveEnd", recentButton.dataset.naveEnd);
+        setValue("entrance", recentButton.dataset.entrance);
+        setValue("passageSide", recentButton.dataset.passageSide);
+        updateLocationAssistant(form);
+        return;
+      }
       const decisionButton = event.target.closest("[data-design-decision]");
       if (decisionButton) {
         designState.decisions[decisionButton.dataset.designKey] = decisionButton.dataset.designDecision;
@@ -1213,6 +1465,12 @@
       if (button && !button.disabled) handleAction(button);
     });
     context.app.addEventListener("submit", (event) => {
+      const featureForm = event.target.closest("[data-v6-form]");
+      if (featureForm) {
+        event.preventDefault();
+        handleFeatureForm(featureForm);
+        return;
+      }
       const form = event.target.closest("[data-design-add-form]");
       if (!form) return;
       event.preventDefault();
@@ -1238,6 +1496,17 @@
     context.app.addEventListener("change", (event) => {
       const assignmentForm = event.target.closest('form[data-form="new-task"]');
       if (assignmentForm) updateSmartAssignmentSummary(assignmentForm);
+      if (event.target.matches("[data-v6-skill-filter]")) {
+        const skill = event.target.value;
+        event.target.closest("form")?.querySelectorAll(".employee-picker > label").forEach((label) => { label.hidden = skill !== "all" && label.dataset.skill !== skill; });
+      }
+      const locationForm = event.target.closest(".v6-location-enhanced");
+      if (locationForm && event.target.matches('[name="site"]')) {
+        const start = locationForm.querySelector('select[name="nave"]');
+        const end = locationForm.querySelector('select[name="naveEnd"]');
+        if (start && end) end.innerHTML = start.innerHTML;
+      }
+      if (locationForm) updateLocationAssistant(locationForm);
       if (event.target.matches('[data-change="attendance"]')) {
         rememberExpandedTimeCards(event.target.dataset.id);
         featureState.scheduleSaved = false;
@@ -1271,6 +1540,10 @@
     afterRender(nextContext) {
       if (nextContext.state.loggedIn && lastScreen && lastScreen !== nextContext.state.screen) featureState.search = "";
       context = nextContext;
+      if (nextContext.state.screen === "tasks" && featureState.pendingTaskFocus) {
+        featureState.search = featureState.pendingTaskFocus;
+        featureState.pendingTaskFocus = "";
+      }
       lastScreen = nextContext.state.loggedIn ? nextContext.state.screen : null;
       if (nextContext.state.role === "Brygadzista" && nextContext.state.selectedCropSite !== nextContext.state.selectedSite) {
         const first = nextContext.state.observations.find((item) => item.site === nextContext.state.selectedSite && item.status !== "Zamknięte");
