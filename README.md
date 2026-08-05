@@ -11,6 +11,7 @@ Publiczna makieta aplikacji zastępującej zeszyty brygadzistów w szklarni. Rep
 - logowanie i wybór roli,
 - panel zmiany dla brygadzisty i kierownika,
 - plan kierownika przekazywany do realizacji głównym i odpowiedzialnym brygadzistom,
+- osobny plan dla każdej szklarni i obiektu pomocniczego: dodawanie, edycja, duplikowanie, priorytet, norma, obsada, instrukcja oraz niezależny status roboczy/opublikowany,
 - strukturę 6 szklarni/etapów z właściwą numeracją naw: 1/39, 2/40, 3/39, 4/36, 5/38 i 6/37,
 - dokładne miejsce pracy: strona szklarni względem łącznika → nawa → jeden z 5 wjazdów → lewa/prawa strona przejścia,
 - około 500 pracowników oraz obiekty wsparcia: sortownia główna, sortownia etap 6 i stary magazyn,

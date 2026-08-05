@@ -30,6 +30,7 @@ class PrototypePageTests(SimpleTestCase):
     def test_assets_are_connected_through_django_static(self):
         response = self.client.get(reverse("login"))
         self.assertContains(response, "/static/prototype/styles.css")
+        self.assertContains(response, "/static/prototype/planning.css")
         self.assertContains(response, "/static/prototype/app.js")
 
     def test_work_completion_tracks_people_location_and_carts(self):
@@ -75,6 +76,21 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn("timeline", script)
         self.assertIn("ticket-timeline", styles)
         self.assertIn("ticket-progress", styles)
+
+    def test_manager_can_edit_and_publish_a_separate_plan_for_every_site(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        script = (static_dir / "app.js").read_text(encoding="utf-8")
+        planning_styles = (static_dir / "planning.css").read_text(encoding="utf-8")
+        self.assertIn("selectedPlanSite", script)
+        self.assertIn("planPublication", script)
+        self.assertIn("select-plan-site", script)
+        self.assertIn("edit-plan", script)
+        self.assertIn("duplicate-plan", script)
+        self.assertIn('name="instructions"', script)
+        self.assertIn('name="target"', script)
+        self.assertIn('name="assigned"', script)
+        self.assertIn("plan-site-selector", planning_styles)
+        self.assertIn("plan-card", planning_styles)
 
     def test_mobile_navigation_is_part_of_the_prototype(self):
         static_dir = Path(__file__).parent / "static" / "prototype"
