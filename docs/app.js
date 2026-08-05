@@ -438,6 +438,7 @@
     applyBrandLogo();
     window.GreenhouseEnhancements?.afterRender({ app, state, render, notify, navigate, exportJson, addTicketEvent, companySites, greenhouseSites, companyEmployeeCount, siteResponsibility, greenhouseEmployeeCount, supportEmployeeCount });
     window.GreenhouseHydra?.afterRender({ app, state, render, notify });
+    window.GreenhouseUXV3?.afterRender({ app, state, render, notify, navigate, greenhouseStructure });
   }
 
   app.addEventListener("click", (event) => {

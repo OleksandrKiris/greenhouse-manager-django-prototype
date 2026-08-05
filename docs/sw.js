@@ -1,6 +1,25 @@
 const CACHE_PREFIX = "greenhouse-manager-";
-const CACHE_NAME = `${CACHE_PREFIX}2026-08-05-5`;
-const CORE = ["./", "./manifest.webmanifest"];
+const CACHE_NAME = `${CACHE_PREFIX}2026-08-05-6`;
+const SHARED_ASSETS = [
+  "styles.css",
+  "planning.css",
+  "visual-refresh.css",
+  "enhancements.css",
+  "hydra-features.css",
+  "frontend-v2.css",
+  "ux-v3.css",
+  "enhancements.js",
+  "hydra-features.js",
+  "ux-v3.js",
+  "app.js",
+  "brand-logo.svg",
+];
+const CORE = [
+  "./",
+  "./manifest.webmanifest",
+  ...SHARED_ASSETS.map((asset) => `./${asset}`),
+  ...SHARED_ASSETS.map((asset) => `/static/prototype/${asset}`),
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {

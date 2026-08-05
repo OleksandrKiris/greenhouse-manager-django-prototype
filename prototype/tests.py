@@ -35,8 +35,10 @@ class PrototypePageTests(SimpleTestCase):
         self.assertContains(response, "/static/prototype/enhancements.css")
         self.assertContains(response, "/static/prototype/hydra-features.css")
         self.assertContains(response, "/static/prototype/frontend-v2.css")
+        self.assertContains(response, "/static/prototype/ux-v3.css")
         self.assertContains(response, "/static/prototype/enhancements.js")
         self.assertContains(response, "/static/prototype/hydra-features.js")
+        self.assertContains(response, "/static/prototype/ux-v3.js")
         self.assertContains(response, "/static/prototype/brand-logo.svg")
         self.assertContains(response, "/static/prototype/app.js")
         self.assertContains(response, "/manifest.webmanifest")
@@ -291,6 +293,8 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn("hydra-to-top", styles)
         self.assertIn("CACHE_NAME", worker)
         self.assertIn("ignoreSearch", worker)
+        self.assertIn('"ux-v3.css"', worker)
+        self.assertIn('"ux-v3.js"', worker)
 
     def test_pwa_manifest_and_service_worker_are_served_by_django(self):
         manifest = self.client.get(reverse("manifest"))
@@ -313,3 +317,14 @@ class PrototypePageTests(SimpleTestCase):
         self.assertTrue((static_dir / "og-v2.png").exists())
         response = self.client.get(reverse("login"))
         self.assertContains(response, "/static/prototype/og-v2.png")
+
+    def test_ux_v3_connects_role_context_bulk_work_and_mobile_actions(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        script = (static_dir / "ux-v3.js").read_text(encoding="utf-8")
+        styles = (static_dir / "ux-v3.css").read_text(encoding="utf-8")
+        app_script = (static_dir / "app.js").read_text(encoding="utf-8")
+        for marker in ["groupNavigation", "enhanceContextBar", "attendanceCommandCenter", "planExecutionPanel", "mapRiskOverview", "ticketWizard", "mobilePrimaryAction", "reviewStateCatalog"]:
+            self.assertIn(marker, script)
+        for marker in ["ux-attendance-command", "ux-plan-execution", "ux-risk-grid", "ux-ticket-wizard", "ux-mobile-primary", "ux-state-catalog"]:
+            self.assertIn(marker, styles)
+        self.assertIn("GreenhouseUXV3?.afterRender", app_script)
