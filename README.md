@@ -16,6 +16,7 @@ Publiczna makieta aplikacji zastępującej zeszyty brygadzistów w szklarni. Rep
 - firmowe logo oraz odświeżony, responsywny system wizualny dla komputerów, tabletów i telefonów,
 - frontend 2.0 z większą typografią, wyraźniejszą hierarchią priorytetów, czytelnymi statusami, wygodnymi polami dotykowymi i spójnym wyglądem wszystkich modułów,
 - operacyjny UX 3.0: grupowaną nawigację, filtry brygady i zapisane filtry, zbiorczą obecność, widok plan–wykonanie, mapę ryzyka wszystkich naw, trzyetapowe zgłoszenia oraz mobilne działanie kontekstowe,
+- Visual System 4.0: spójne ikony Lucide, ciemny panel nawigacyjny, większą typografię, lżejsze karty, wyraźniejsze statusy i priorytety, responsywne karty dużych tabel, zwijany panel wybranego miejsca na mapie oraz zapamiętywany tryb wysokiego kontrastu do pracy w szklarni,
 - spokojny system wizualny inspirowany portalem CITRONEX Hydra: białe powierzchnie, stonowana czerwień, proste karty i jeden wyróżniony pierwszy krok,
 - wspólny kontekst daty, zmiany, obiektu i wyszukiwania oraz dziesięć odrębnych centrów pracy z własnymi metrykami, filtrami i działaniami,
 - ścisłe rozdzielenie ekranów: szczegóły obecności są tylko w „Liście obecności”, wykonanie tylko w „Pracach”, wyniki tylko w „Wydajności”, a widok łączący priorytety znajduje się wyłącznie w „Podsumowaniu”,

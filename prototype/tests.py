@@ -36,9 +36,11 @@ class PrototypePageTests(SimpleTestCase):
         self.assertContains(response, "/static/prototype/hydra-features.css")
         self.assertContains(response, "/static/prototype/frontend-v2.css")
         self.assertContains(response, "/static/prototype/ux-v3.css")
+        self.assertContains(response, "/static/prototype/visual-system-v4.css")
         self.assertContains(response, "/static/prototype/enhancements.js")
         self.assertContains(response, "/static/prototype/hydra-features.js")
         self.assertContains(response, "/static/prototype/ux-v3.js")
+        self.assertContains(response, "/static/prototype/visual-system-v4.js")
         self.assertContains(response, "/static/prototype/brand-logo.svg")
         self.assertContains(response, "/static/prototype/app.js")
         self.assertContains(response, "/manifest.webmanifest")
@@ -328,3 +330,18 @@ class PrototypePageTests(SimpleTestCase):
         for marker in ["ux-attendance-command", "ux-plan-execution", "ux-risk-grid", "ux-ticket-wizard", "ux-mobile-primary", "ux-state-catalog"]:
             self.assertIn(marker, styles)
         self.assertIn("GreenhouseUXV3?.afterRender", app_script)
+
+    def test_visual_system_v4_adds_consistent_icons_and_greenhouse_mode(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        script = (static_dir / "visual-system-v4.js").read_text(encoding="utf-8")
+        styles = (static_dir / "visual-system-v4.css").read_text(encoding="utf-8")
+        app_script = (static_dir / "app.js").read_text(encoding="utf-8")
+        worker = (static_dir / "service-worker.js").read_text(encoding="utf-8")
+        for marker in ["decorateNavigation", "decorateTopbar", "labelResponsiveRows", "enhanceMapSheet", "greenhouse-mode", "lucide-sprite.svg"]:
+            self.assertIn(marker, script)
+        for marker in ["visual-system-v4", "v4-greenhouse-mode", "v4-location-sheet", "v4-sheet-handle", "prefers-reduced-motion"]:
+            self.assertIn(marker, styles)
+        self.assertIn("GreenhouseVisualV4?.afterRender", app_script)
+        self.assertIn('"visual-system-v4.css"', worker)
+        self.assertIn('"visual-system-v4.js"', worker)
+        self.assertTrue((static_dir / "lucide-sprite.svg").exists())

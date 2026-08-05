@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "greenhouse-manager-";
-const CACHE_NAME = `${CACHE_PREFIX}2026-08-05-6`;
+const CACHE_NAME = `${CACHE_PREFIX}2026-08-05-7`;
 const SHARED_ASSETS = [
   "styles.css",
   "planning.css",
@@ -8,11 +8,14 @@ const SHARED_ASSETS = [
   "hydra-features.css",
   "frontend-v2.css",
   "ux-v3.css",
+  "visual-system-v4.css",
   "enhancements.js",
   "hydra-features.js",
   "ux-v3.js",
+  "visual-system-v4.js",
   "app.js",
   "brand-logo.svg",
+  "lucide-sprite.svg",
 ];
 const CORE = [
   "./",
