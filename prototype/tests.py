@@ -32,12 +32,22 @@ class PrototypePageTests(SimpleTestCase):
         self.assertContains(response, "/static/prototype/styles.css")
         self.assertContains(response, "/static/prototype/app.js")
 
-    def test_work_completion_tracks_people_rows_and_carts(self):
+    def test_work_completion_tracks_people_location_and_carts(self):
         script = (Path(__file__).parent / "static" / "prototype" / "app.js").read_text(encoding="utf-8")
         self.assertIn('name="people"', script)
-        self.assertIn('name="row"', script)
+        self.assertIn('name="nave"', script)
+        self.assertIn('name="entrance"', script)
+        self.assertIn('name="passageSide"', script)
         self.assertIn('name="cart"', script)
         self.assertIn("contributions", script)
+
+    def test_greenhouse_stage_nave_ranges_and_responsibility_are_modelled(self):
+        script = (Path(__file__).parent / "static" / "prototype" / "app.js").read_text(encoding="utf-8")
+        for stage, nave_count in [(1, 39), (2, 40), (3, 39), (4, 36), (5, 38), (6, 37)]:
+            self.assertIn(f'{{ site: "Szklarnia {stage}", stage: "{stage} etap", naveCount: {nave_count} }}', script)
+        self.assertIn("data-location-naves", script)
+        self.assertIn('reporter:"Anna Kowalska"', script)
+        self.assertIn('source:data.get("source")', script)
 
     def test_mobile_navigation_is_part_of_the_prototype(self):
         static_dir = Path(__file__).parent / "static" / "prototype"
