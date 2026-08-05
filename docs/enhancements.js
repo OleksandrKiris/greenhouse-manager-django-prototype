@@ -362,9 +362,12 @@
     const absent = state.employees.length - present - unsettled;
     const netMinutes = state.employees.reduce((sum, employee) => sum + employeeNetMinutes(employee), 0);
     const paidBreakMinutes = state.employees.reduce((sum, employee) => sum + (employee.status === "Obecny" ? breakAccounting(employee).paid : 0), 0);
+    const sitePeople = context.siteResponsibility?.find((item) => item.site === state.selectedSite)?.people || 55;
+    const scopePeople = state.role === "Brygadzista" ? sitePeople : state.role === "Kadry" ? context.companyEmployeeCount : state.role === "Kierownik" ? context.greenhouseEmployeeCount : state.employees.length;
+    const scopeLabel = state.role === "Brygadzista" ? `${state.selectedSite} · ${scopePeople} osób łącznie` : state.role === "Kierownik" ? `${scopePeople} osób w 6 szklarniach` : state.role === "Kadry" ? `${scopePeople} osób w przedsiębiorstwie` : "przykładowy podgląd";
     return `<section class="module-upgrade attendance-upgrade">
       <div class="upgrade-head"><div><span class="kicker">ELASTYCZNY CZAS PRACY</span><h2>Kompaktowa lista godzin i przerw</h2><p>Kliknij pracownika, aby rozwinąć szczegóły. Pierwsze 15 minut pierwszej przerwy jest płatne i pozostaje w czasie pracy.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="attendance-reminder">Przypomnij o potwierdzeniu</button><button class="primary" data-module-action="quick-nav" data-target="${nextTarget}">${nextLabel}</button></div></div>
-      <div class="upgrade-metrics">${metric("Obecni", present, `z ${state.employees.length} pokazanych`)}${metric("Czas netto", `${Math.floor(netMinutes / 60)} h ${netMinutes % 60} min`, "z uwzględnieniem płatnej przerwy", "blue")}${metric("Płatne przerwy", `${paidBreakMinutes} min`, "do 15 min pierwszej przerwy")}${metric("Nieustaleni", unsettled, unsettled ? "wymagają decyzji" : "statusy kompletne", unsettled ? "amber" : "green")}</div>
+      <div class="upgrade-metrics">${metric("Obecni w podglądzie", present, `${state.employees.length} kart · ${scopeLabel}`)}${metric("Czas netto", `${Math.floor(netMinutes / 60)} h ${netMinutes % 60} min`, "z uwzględnieniem płatnej przerwy", "blue")}${metric("Płatne przerwy", `${paidBreakMinutes} min`, "do 15 min pierwszej przerwy")}${metric("Nieustaleni", unsettled, unsettled ? "wymagają decyzji" : "statusy kompletne", unsettled ? "amber" : "green")}</div>
       <div class="filter-row"><span>Filtr listy</span>${segmented("attendance", ["Wszyscy", "Obecni", "Nieustaleni", "Nieobecni"], featureState.attendanceFilter)}<small class="filter-result">${featureState.scheduleSaved ? "✓ harmonogram zapisany" : featureState.reminderSent ? "✓ przypomnienie zapisane" : `${absent} nieobecnych`}</small></div>
     </section>`;
   }

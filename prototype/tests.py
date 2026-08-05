@@ -222,3 +222,12 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn("pierwsze 15 minut pierwszej przerwy", enhancements)
         self.assertIn(".time-worker-card > summary", styles)
         self.assertIn(".time-worker-details", styles)
+
+    def test_each_greenhouse_has_fifty_to_sixty_people_split_between_foremen(self):
+        script = (Path(__file__).parent / "static" / "prototype" / "app.js").read_text(encoding="utf-8")
+        for people in [56, 54, 59, 52, 57, 55]:
+            self.assertIn(f"people:{people}", script)
+        self.assertIn("const greenhouseEmployeeCount", script)
+        self.assertIn("const supportEmployeeCount", script)
+        self.assertIn("Brygady w szklarni", script)
+        self.assertIn("team.people", script)
