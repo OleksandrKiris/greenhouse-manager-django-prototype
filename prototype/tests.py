@@ -49,6 +49,19 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn('reporter:"Anna Kowalska"', script)
         self.assertIn('source:data.get("source")', script)
 
+    def test_crop_map_uses_full_greenhouse_location_and_audit_trail(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        script = (static_dir / "app.js").read_text(encoding="utf-8")
+        styles = (static_dir / "styles.css").read_text(encoding="utf-8")
+        self.assertIn("select-observation-cell", script)
+        self.assertIn("Lewa od łącznika", script)
+        self.assertIn("Prawa od łącznika", script)
+        self.assertIn("Array.from({length:5}", script)
+        self.assertIn("selectedCropNave", script)
+        self.assertIn("Informacja od", script)
+        self.assertIn("greenhouse-plan", styles)
+        self.assertIn("observation-register", styles)
+
     def test_mobile_navigation_is_part_of_the_prototype(self):
         static_dir = Path(__file__).parent / "static" / "prototype"
         script = (static_dir / "app.js").read_text(encoding="utf-8")
