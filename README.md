@@ -10,11 +10,15 @@ Publiczna makieta aplikacji zastępującej zeszyty brygadzistów w szklarni. Rep
 
 - logowanie i wybór roli,
 - panel zmiany dla brygadzisty i kierownika,
+- plan zmiany z kontrolą braków obsady i publikacją,
 - obecność pracowników oraz status „nieustalony”,
-- planowanie i zamykanie prac,
+- planowanie, wstrzymywanie, zmiana obsady i zamykanie prac,
 - wydajność w `rz./h` oraz `kg/h`,
+- karty pracowników, kompetencje, dokumenty i bilans godzin,
 - mapa upraw i obserwacje,
-- usterki oraz ich statusy,
+- usterki, właściciele, statusy i czas reakcji SLA,
+- materiały, stany minimalne, wydania i zapotrzebowania,
+- centrum powiadomień i akceptacje kierownika,
 - raport zmiany i walidację brakujących danych,
 - zbieranie komentarzy do makiety i eksport opinii do JSON.
 

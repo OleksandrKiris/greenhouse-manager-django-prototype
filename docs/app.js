@@ -4,11 +4,14 @@
   const app = document.getElementById("prototype-app");
   const navItems = [
     ["dashboard", "Podsumowanie", "Start", "⌂"],
+    ["planning", "Plan zmiany", "Plan", "▣"],
     ["attendance", "Lista obecności", "Obsada", "✓"],
     ["tasks", "Prace", "Prace", "↗"],
     ["productivity", "Wydajność", "Wynik", "≈"],
+    ["team", "Pracownicy", "Zespół", "♙"],
     ["crop", "Mapa obserwacji", "Uprawy", "◎"],
     ["tickets", "Zgłoszenia", "Usterki", "⌘"],
+    ["materials", "Materiały", "Magazyn", "◇"],
     ["reports", "Raporty", "Raport", "▦"],
   ];
   const roles = ["Brygadzista", "Kierownik", "Ochrona roślin", "Dział techniczny", "Kadry"];
@@ -22,9 +25,9 @@
   const access = {
     Brygadzista: navItems.map((item) => item[0]),
     Kierownik: navItems.map((item) => item[0]),
-    "Ochrona roślin": ["dashboard", "crop", "reports"],
-    "Dział techniczny": ["dashboard", "tickets", "reports"],
-    Kadry: ["dashboard", "attendance", "reports"],
+    "Ochrona roślin": ["dashboard", "planning", "crop", "materials", "reports"],
+    "Dział techniczny": ["dashboard", "planning", "tickets", "materials", "reports"],
+    Kadry: ["dashboard", "attendance", "team", "reports"],
   };
   const employeesSeed = [
     [1, "Anar Akhmedov", "EMP-007", "Obecny"], [2, "Chidi Eze", "EMP-002", "Obecny"],
@@ -41,14 +44,46 @@
     { id: 4, title: "Zbiór", row: "R12", side: "Obie", people: ["Ali Sidyma"], status: "Zakończone", unit: "kg", result: 132, hours: 1, progress: 100 },
   ];
   const ticketSeed = [
-    { id: 1, title: "Uszkodzone oświetlenie", place: "R19 · Rząd 19", priority: "Średni", status: "Nowe", owner: "Anna Kowalska" },
-    { id: 2, title: "Nieszczelność przewodu", place: "R11 · Rząd 11", priority: "Wysoki", status: "Przyjęte", owner: "Marek Wiśniewski" },
-    { id: 3, title: "Wózek zbiorczy nie reaguje", place: "R04 · Rząd 4", priority: "Krytyczny", status: "W realizacji", owner: "Piotr Zieliński" },
+    { id: 1, title: "Uszkodzone oświetlenie", place: "R19 · Rząd 19", priority: "Średni", status: "Nowe", owner: "Anna Kowalska", sla: "4 h" },
+    { id: 2, title: "Nieszczelność przewodu", place: "R11 · Rząd 11", priority: "Wysoki", status: "Przyjęte", owner: "Marek Wiśniewski", sla: "1 h 18 min" },
+    { id: 3, title: "Wózek zbiorczy nie reaguje", place: "R04 · Rząd 4", priority: "Krytyczny", status: "W realizacji", owner: "Piotr Zieliński", sla: "42 min" },
   ];
   const observationSeed = [
     { row: 3, severity: "high", symptom: "Mozaikowate przebarwienia", plants: 3 },
     { row: 9, severity: "medium", symptom: "Zwijanie młodych liści", plants: 7 },
     { row: 16, severity: "medium", symptom: "Nietypowe plamy", plants: 1 },
+  ];
+  const planSeed = [
+    { id: 1, time: "06:15–09:00", zone: "S1 · R01–R06", title: "Zakładanie zawieszek", need: 5, assigned: 5, status: "Gotowe", unit: "rz./h" },
+    { id: 2, time: "06:15–10:30", zone: "S1 · R07–R10", title: "Obcinanie liści", need: 4, assigned: 3, status: "Brak 1 osoby", unit: "rz./h" },
+    { id: 3, time: "07:00–12:00", zone: "S2 · R11–R18", title: "Zbiór", need: 3, assigned: 3, status: "Gotowe", unit: "kg/h" },
+    { id: 4, time: "12:15–13:45", zone: "Pakownia", title: "Sortowanie i porządek", need: 2, assigned: 2, status: "Gotowe", unit: "kg/h" },
+  ];
+  const materialsSeed = [
+    { id: 1, name: "Zawieszki do roślin", sku: "MAT-001", quantity: 840, unit: "szt.", min: 500, location: "Magazyn A · regał 2" },
+    { id: 2, name: "Sznurek ogrodniczy", sku: "MAT-014", quantity: 18, unit: "rol.", min: 20, location: "Magazyn A · regał 4" },
+    { id: 3, name: "Skrzynki zbiorcze", sku: "MAT-021", quantity: 126, unit: "szt.", min: 80, location: "S2 · punkt wydania" },
+    { id: 4, name: "Rękawice nitrylowe", sku: "BHP-006", quantity: 7, unit: "op.", min: 12, location: "Magazyn BHP" },
+  ];
+  const employeeDetails = {
+    1: { skills: ["Liście", "Zbiór"], level: "Samodzielny", balance: "+2:15", certificate: "BHP · 12.2026" },
+    2: { skills: ["Zawieszki", "Liście"], level: "Mentor", balance: "+0:45", certificate: "BHP · 02.2027" },
+    3: { skills: ["Zawieszki", "Zbiór"], level: "Samodzielny", balance: "−1:00", certificate: "BHP · 11.2026" },
+    4: { skills: ["Pakownia"], level: "Samodzielny", balance: "+4:00", certificate: "Badania · 09.2026" },
+    5: { skills: ["Liście", "Pakownia"], level: "Wdrożenie", balance: "0:00", certificate: "BHP · 01.2027" },
+    6: { skills: ["Liście", "Zbiór"], level: "Mentor", balance: "+1:30", certificate: "Wózek · 10.2026" },
+    7: { skills: ["Liście"], level: "Samodzielny", balance: "−0:30", certificate: "BHP · 03.2027" },
+    8: { skills: ["Zbiór", "Pakownia"], level: "Samodzielny", balance: "+2:00", certificate: "BHP · 12.2026" },
+    9: { skills: ["Zawieszki"], level: "Wdrożenie", balance: "0:00", certificate: "BHP · 08.2026" },
+    10: { skills: ["Zbiór", "Wózek"], level: "Mentor", balance: "+3:15", certificate: "Wózek · 11.2026" },
+    11: { skills: ["Zawieszki", "Liście"], level: "Samodzielny", balance: "+0:15", certificate: "BHP · 04.2027" },
+    12: { skills: ["Pakownia"], level: "Samodzielny", balance: "−2:00", certificate: "Badania · 08.2026" },
+  };
+  const notificationSeed = [
+    { id: 1, tone: "red", title: "Krytyczna usterka w R04", detail: "Wózek zbiorczy nie reaguje · SLA 42 min", screen: "tickets", read: false },
+    { id: 2, tone: "amber", title: "Brakuje 1 osoby w planie", detail: "Obcinanie liści · S1 R07–R10", screen: "planning", read: false },
+    { id: 3, tone: "amber", title: "Niski stan rękawic", detail: "7 op. przy minimum 12 op.", screen: "materials", read: false },
+    { id: 4, tone: "green", title: "Wynik zbioru zapisany", detail: "132 kg/h · Ali Sidyma", screen: "productivity", read: true },
   ];
 
   const routeScreen = app.dataset.initialScreen || "login";
@@ -62,11 +97,19 @@
     tasks: taskSeed.map((item) => ({ ...item, people: [...item.people] })),
     tickets: ticketSeed.map((item) => ({ ...item })),
     observations: observationSeed.map((item) => ({ ...item })),
+    plan: planSeed.map((item) => ({ ...item })),
+    materials: materialsSeed.map((item) => ({ ...item })),
+    notifications: notificationSeed.map((item) => ({ ...item })),
     selectedRow: 3,
     modal: null,
     selectedTask: null,
+    selectedEmployee: null,
+    selectedMaterial: null,
     review: true,
     feedbackOpen: false,
+    notificationsOpen: false,
+    planPublished: false,
+    approvedItems: [],
     feedback: loadFeedback(),
     shiftClosed: false,
     toast: "",
@@ -129,9 +172,36 @@
     const present = presentCount(); const done = completedTasks().length;
     return `${pageHead(`PANEL · ${state.role.toUpperCase()}`, state.role === "Brygadzista" ? "Dzień dobry, Anna" : `Panel: ${state.role}`, roleDescriptions[state.role], `<button class="secondary" data-action="open-close">Zakończ zmianę</button>`)}
       <section class="hero"><div><span class="kicker light">BRYGADA A</span><h2>${present} z 12 osób<br>gotowych do pracy</h2><p>${12 - present} osoby wymagają sprawdzenia przed zamknięciem zmiany.</p><div class="hero-buttons"><button class="secondary" data-nav="attendance">Sprawdź obecność</button><button class="ghost" data-nav="tasks">Przejdź do prac →</button></div></div><div class="hero-score"><span>REALIZACJA ZMIANY</span><b>${done}/6</b><small>zadań zakończonych</small><div class="progress"><i style="width:${Math.min(100, done * 16)}%"></i></div></div></section>
+      ${state.role === "Kierownik" ? `<section class="approval-strip surface"><div><span class="kicker">DO ZATWIERDZENIA</span><h3>${2 - state.approvedItems.length} decyzje czekają na kierownika</h3></div>${[["attendance","Korekta obecności · Ewa Nowak"],["report","Raport brygady A · zmiana poranna"]].filter(([id])=>!state.approvedItems.includes(id)).map(([id,label])=>`<div class="approval-item"><span>${label}</span><button class="secondary" data-action="approve-item" data-id="${id}">Zatwierdź</button></div>`).join("") || `<div class="approval-ready">✓ Wszystkie decyzje zatwierdzone</div>`}</section>` : ""}
       <section class="metrics">${metric("Obecni", present, "z 12 zaplanowanych", "✓")}${metric("Aktywne prace", state.tasks.length - done, `${done} zakończone`, "↗", "blue")}${metric("Alerty upraw", state.observations.length, "wymagają uwagi", "◎", "amber")}${metric("Usterki", activeTickets(), "aktywnych zgłoszeń", "⌘", "red")}</section>
-      <section class="two-col"><article class="surface card-pad"><span class="kicker">SKRÓTY</span><h3>Co chcesz zrobić?</h3><div class="quick-grid">${[["attendance","✓","Obecność","Ustal obsadę zmiany"],["tasks","↗","Przydziel pracę","Połącz ludzi i rząd"],["crop","◎","Dodaj obserwację","Zgłoś objaw uprawy"],["tickets","⌘","Zgłoś usterkę","Przekaż do technicznych"]].filter(([screen]) => access[state.role].includes(screen)).map(([screen,icon,title,sub]) => `<button data-nav="${screen}"><i>${icon}</i><span><b>${title}</b><small>${sub}</small></span><em>→</em></button>`).join("")}</div></article>
+      <section class="two-col"><article class="surface card-pad"><span class="kicker">SKRÓTY</span><h3>Co chcesz zrobić?</h3><div class="quick-grid">${[["planning","▣","Plan zmiany","Sprawdź obsadę stref"],["attendance","✓","Obecność","Ustal obsadę zmiany"],["tasks","↗","Przydziel pracę","Połącz ludzi i rząd"],["materials","◇","Materiały","Sprawdź stany i wydania"],["crop","◎","Dodaj obserwację","Zgłoś objaw uprawy"],["tickets","⌘","Zgłoś usterkę","Przekaż do technicznych"]].filter(([screen]) => access[state.role].includes(screen)).map(([screen,icon,title,sub]) => `<button data-nav="${screen}"><i>${icon}</i><span><b>${title}</b><small>${sub}</small></span><em>→</em></button>`).join("")}</div></article>
       <article class="surface card-pad"><span class="kicker">NA TERAZ</span><h3>Ostatnie zdarzenia</h3><div class="events"><div class="event"><i class="dot red"></i><span><b>Wózek zbiorczy nie reaguje</b><small>R04 · 18 minut temu</small></span></div><div class="event"><i class="dot amber"></i><span><b>Zwijanie młodych liści</b><small>R09 · 34 minuty temu</small></span></div><div class="event"><i class="dot"></i><span><b>Wynik zapisany: 132 kg</b><small>Zbiór · Ali Sidyma</small></span></div></div></article></section>`;
+  }
+
+  function planning() {
+    const missing = state.plan.reduce((sum, item) => sum + Math.max(0, item.need - item.assigned), 0);
+    const assigned = state.plan.reduce((sum, item) => sum + item.assigned, 0);
+    return `${pageHead("ORGANIZACJA DNIA", "Plan zmiany", "Zapotrzebowanie, obsada i kolejność prac w jednej osi dnia.", `<button class="secondary" data-action="new-plan">+ Pozycja planu</button> <button class="primary" data-action="publish-plan" ${missing ? "disabled" : ""}>${state.planPublished ? "✓ Plan opublikowany" : "Opublikuj plan"}</button>`)}
+      ${missing ? `<div class="warning"><i>!</i><p><b>Plan ma lukę w obsadzie.</b> Brakuje ${missing} osoby. Uzupełnij obsadę przed publikacją.</p><button class="ghost" data-action="fill-all-plan">Uzupełnij automatycznie</button></div>` : `<div class="success"><i>✓</i><p><b>Plan jest kompletny.</b> Wszystkie strefy mają wymaganą obsadę.</p></div>`}
+      <section class="compact surface"><div><span>Zaplanowane osoby</span><b>${assigned}</b></div><div><span>Potrzebne osoby</span><b>${state.plan.reduce((sum,item)=>sum+item.need,0)}</b></div><div><span>Luki w obsadzie</span><b>${missing}</b></div><div><span>Status planu</span><b>${state.planPublished ? "Opublikowany" : "Roboczy"}</b></div></section>
+      <section class="plan-board">${state.plan.map((item,index)=>{ const fill=Math.min(100,Math.round(item.assigned/item.need*100)); const shortage=item.assigned<item.need; return `<article class="plan-row surface ${shortage?"shortage":""}"><div class="plan-time"><b>${item.time}</b><small>ETAP ${String(index+1).padStart(2,"0")}</small></div><div class="plan-work"><span class="kicker">${item.zone}</span><h3>${item.title}</h3><small>Pomiar: ${item.unit}</small></div><div class="staffing"><div><span>Obsada</span><b>${item.assigned}/${item.need} os.</b></div><div class="bar"><i style="width:${fill}%"></i></div></div><span class="plan-status ${shortage?"bad":""}">${shortage?"WYMAGA OBSADY":"GOTOWE"}</span>${shortage?`<button class="secondary" data-action="fill-plan" data-id="${item.id}">Dodaj osobę</button>`:`<button class="ghost" data-action="edit-plan" data-id="${item.id}">Edytuj</button>`}</article>`;}).join("")}</section>
+      <section class="logic-note"><b>Logika systemu</b><span>Nieobecność aktualizuje dostępność → system pokazuje lukę → brygadzista uzupełnia obsadę → kierownik widzi opublikowany plan.</span></section>`;
+  }
+
+  function team() {
+    const present = state.employees.filter((item)=>item.status==="Obecny").length;
+    const expiring = Object.values(employeeDetails).filter((item)=>item.certificate.includes("08.2026") || item.certificate.includes("09.2026")).length;
+    return `${pageHead("ZESPÓŁ I KOMPETENCJE", "Pracownicy", "Dostępność, umiejętności, dokumenty i bilans godzin pomagają dobrać właściwe osoby.", `<select aria-label="Filtr kompetencji"><option>Wszystkie kompetencje</option><option>Zbiór</option><option>Liście</option><option>Zawieszki</option><option>Wózek</option></select>`)}
+      <section class="metrics">${metric("Pracownicy", state.employees.length, "w brygadzie A", "♙")}${metric("Dostępni dziś", present, "do przydzielenia", "✓")}${metric("Mentorzy", 3, "mogą wdrażać", "★", "blue")}${metric("Dokumenty", expiring, "wygasają do 60 dni", "!", "amber")}</section>
+      <section class="surface team-table"><div class="team-head"><span>Pracownik</span><span>Dostępność</span><span>Kompetencje</span><span>Poziom</span><span>Bilans</span><span>Dokument</span><span></span></div>${state.employees.map((employee)=>{const detail=employeeDetails[employee.id];return `<div class="team-row"><span class="person"><i class="avatar">${initials(employee.name)}</i><span><b>${employee.name}</b><small>${employee.code}</small></span></span><span class="availability ${employee.status!=="Obecny"?"off":""}">${employee.status}</span><span class="skill-list">${detail.skills.map((skill)=>`<i>${skill}</i>`).join("")}</span><b>${detail.level}</b><span class="balance">${detail.balance}</span><span class="document ${detail.certificate.includes("08.2026")?"warn":""}">${detail.certificate}</span><button class="ghost" data-action="employee-detail" data-id="${employee.id}">Szczegóły</button></div>`;}).join("")}</section>`;
+  }
+
+  function materials() {
+    const low = state.materials.filter((item)=>item.quantity<item.min);
+    return `${pageHead("MAGAZYN PODRĘCZNY", "Materiały i wyposażenie", "Stany minimalne, lokalizacja oraz wydanie materiałów na zmianę.", `<button class="primary" data-action="material-request">+ Zgłoś zapotrzebowanie</button>`)}
+      ${low.length ? `<div class="warning"><i>!</i><p><b>${low.length} pozycje poniżej minimum.</b> System proponuje utworzenie zapotrzebowania.</p><button class="ghost" data-action="request-low">Zamów brakujące</button></div>` : `<div class="success"><i>✓</i><p><b>Stany są prawidłowe.</b> Wszystkie materiały są powyżej minimum.</p></div>`}
+      <section class="materials-grid">${state.materials.map((item)=>{const lowStock=item.quantity<item.min; const width=Math.min(100,Math.round(item.quantity/(item.min*2)*100));return `<article class="material surface ${lowStock?"low":""}"><div class="material-top"><span class="material-icon">◇</span><span class="stock-state">${lowStock?"NISKI STAN":"DOSTĘPNE"}</span></div><h3>${item.name}</h3><small>${item.sku} · ${item.location}</small><div class="material-value"><b>${item.quantity}</b><span>${item.unit}</span><em>min. ${item.min}</em></div><div class="bar"><i style="width:${width}%"></i></div><div class="material-actions"><button class="ghost" data-action="issue-material" data-id="${item.id}">Wydaj</button>${lowStock?`<button class="primary" data-action="order-material" data-id="${item.id}">Zamów</button>`:""}</div></article>`;}).join("")}</section>
+      <section class="logic-note"><b>Ślad materiału</b><span>Wydanie jest przypisane do zadania, brygady i osoby. Stan zmniejsza się automatycznie, a zejście poniżej minimum tworzy alert.</span></section>`;
   }
 
   function attendance() {
@@ -145,7 +215,7 @@
   function tasks() {
     return `${pageHead("PLAN I WYKONANIE", "Prace na zmianie", "Przydzielaj ludzi do zadań, kontroluj wykonanie i zapisuj wynik.", `<button class="primary" data-action="new-task">+ Dodaj zadanie</button>`)}
       <section class="compact surface"><div><span>Dostępni pracownicy</span><b>${presentCount()}</b></div><div><span>Wszystkie zadania</span><b>${state.tasks.length}</b></div><div><span>Zmiana</span><b>Poranna</b></div><div><span>Brygada</span><b>A</b></div></section>
-      <section class="task-grid">${state.tasks.map((task) => `<article class="task surface"><div class="task-top"><span class="chip ${task.status === "Zakończone" ? "done" : ""}">${task.status}</span><small>${task.row} · ${task.side}</small></div><h3>${task.title}</h3><p>Rząd ${Number(task.row.slice(1))}</p><div class="people">${task.people.map((person) => `<i class="avatar" title="${person}">${initials(person)}</i>`).join("")}<small>${task.people.length} os.</small></div><div class="task-result"><div><span>Realizacja</span><b>${task.status === "Zakończone" ? rate(task) : `${task.progress}%`}</b></div><div class="bar"><i style="width:${task.progress}%"></i></div></div>${task.status === "W trakcie" ? `<div class="task-actions"><button class="ghost">Wstrzymaj</button><button class="primary" data-action="finish-task" data-id="${task.id}">Zakończ</button></div>` : `<div class="saved">✓ Wynik zapisany</div>`}</article>`).join("")}</section>`;
+      <section class="task-grid">${state.tasks.map((task) => `<article class="task surface"><div class="task-top"><span class="chip ${task.status === "Zakończone" ? "done" : task.status === "Wstrzymane" ? "paused" : ""}">${task.status}</span><small>${task.row} · ${task.side}</small></div><h3>${task.title}</h3><p>Rząd ${Number(task.row.slice(1))}</p><div class="people">${task.people.map((person) => `<i class="avatar" title="${person}">${initials(person)}</i>`).join("")}<small>${task.people.length} os.</small><button class="mini-link" data-action="reassign-task" data-id="${task.id}">Zmień obsadę</button></div><div class="task-result"><div><span>Realizacja</span><b>${task.status === "Zakończone" ? rate(task) : `${task.progress}%`}</b></div><div class="bar"><i style="width:${task.progress}%"></i></div></div>${task.status !== "Zakończone" ? `<div class="task-actions"><button class="ghost" data-action="toggle-task" data-id="${task.id}">${task.status === "Wstrzymane" ? "Wznów" : "Wstrzymaj"}</button><button class="primary" data-action="finish-task" data-id="${task.id}">Zakończ</button></div>` : `<div class="saved">✓ Wynik zapisany · ${rate(task)}</div>`}</article>`).join("")}</section>`;
   }
 
   function productivity() {
@@ -160,12 +230,12 @@
     const selected = state.observations.find((item) => item.row === state.selectedRow);
     return `${pageHead("OCHRONA ROŚLIN", "Mapa obserwacji", "Każde zgłoszenie ma rząd, objaw, liczbę roślin i poziom zagrożenia.", `<button class="primary" data-action="new-observation">+ Dodaj obserwację</button>`)}
       <section class="crop-layout"><article class="crop-map surface"><div class="section-title"><div><span class="kicker">SZKLARNIA 1</span><h3>Sektory i rzędy</h3></div><div class="legend">● brak · <span style="color:#efa61b">● obserwacja</span> · <span style="color:#ed0016">● alarm</span></div></div><div class="rows">${Array.from({ length: 24 }, (_, index) => { const row = index + 1; const obs = state.observations.find((item) => item.row === row); return `<button class="row ${obs?.severity || ""} ${state.selectedRow === row ? "selected" : ""}" data-action="select-row" data-row="${row}"><b>R${String(row).padStart(2,"0")}</b><small>${obs ? `${obs.plants} rośl.` : "czysto"}</small></button>`; }).join("")}</div></article>
-      <aside class="crop-detail surface"><span class="kicker">WYBRANY RZĄD</span><h2>R${String(state.selectedRow).padStart(2,"0")}</h2>${selected ? `<span class="severity ${selected.severity}">${selected.severity === "high" ? "WYSOKI" : selected.severity === "medium" ? "ŚREDNI" : "OBSERWACJA"}</span><h3>${selected.symptom}</h3><p>Dotyczy ${selected.plants} roślin. Informacja jest przekazana do ochrony roślin.</p><button class="secondary wide" data-action="new-observation">Aktualizuj wpis</button>` : `<div class="empty"><b>Brak obserwacji</b><p>Ten rząd nie ma aktywnych zgłoszeń.</p><button class="secondary" data-action="new-observation">Dodaj obserwację</button></div>`}</aside></section>`;
+      <aside class="crop-detail surface"><span class="kicker">WYBRANY RZĄD</span><h2>R${String(state.selectedRow).padStart(2,"0")}</h2>${selected ? `<span class="severity ${selected.severity}">${selected.severity === "high" ? "WYSOKI" : selected.severity === "medium" ? "ŚREDNI" : "OBSERWACJA"}</span><h3>${selected.symptom}</h3><p>Dotyczy ${selected.plants} roślin. Właściciel: Ochrona roślin. Termin decyzji: dziś 10:30.</p><div class="detail-actions"><button class="secondary" data-action="new-observation">Aktualizuj</button><button class="primary" data-action="resolve-observation">Zamknij alert</button></div>` : `<div class="empty"><b>Brak obserwacji</b><p>Ten rząd nie ma aktywnych zgłoszeń.</p><button class="secondary" data-action="new-observation">Dodaj obserwację</button></div>`}</aside></section>`;
   }
 
   function tickets() {
     return `${pageHead("UTRZYMANIE RUCHU", "Zgłoszenia techniczne", "Usterka ma właściciela, priorytet, status i historię.", `<button class="primary" data-action="new-ticket">+ Nowe zgłoszenie</button>`)}
-      <section class="ticket-grid">${state.tickets.map((ticket) => `<article class="ticket surface ${ticket.priority === "Krytyczny" ? "critical" : ticket.priority === "Wysoki" ? "high" : ""}"><div class="ticket-top"><span>${ticket.priority}</span><small>#${String(ticket.id).padStart(4,"0")} · 05.08.2026</small></div><h3>${ticket.title}</h3><p>${ticket.place}</p><div class="ticket-owner"><i class="avatar">${initials(ticket.owner)}</i><span><small>Odpowiedzialny</small><b>${ticket.owner}</b></span></div><select data-change="ticket-status" data-id="${ticket.id}" aria-label="Status zgłoszenia ${ticket.title}">${["Nowe","Przyjęte","W realizacji","Zamknięte"].map((status) => `<option ${ticket.status === status ? "selected" : ""}>${status}</option>`).join("")}</select></article>`).join("")}</section>
+      <section class="ticket-grid">${state.tickets.map((ticket) => `<article class="ticket surface ${ticket.priority === "Krytyczny" ? "critical" : ticket.priority === "Wysoki" ? "high" : ""}"><div class="ticket-top"><span>${ticket.priority}</span><small>#${String(ticket.id).padStart(4,"0")} · 05.08.2026</small></div><h3>${ticket.title}</h3><p>${ticket.place}</p><div class="sla"><span>Czas reakcji (SLA)</span><b>${ticket.status === "Zamknięte" ? "Zrealizowano" : ticket.sla}</b></div><div class="ticket-owner"><i class="avatar">${initials(ticket.owner)}</i><span><small>Odpowiedzialny</small><b>${ticket.owner}</b></span></div><select data-change="ticket-status" data-id="${ticket.id}" aria-label="Status zgłoszenia ${ticket.title}">${["Nowe","Przyjęte","W realizacji","Zamknięte"].map((status) => `<option ${ticket.status === status ? "selected" : ""}>${status}</option>`).join("")}</select></article>`).join("")}</section>
       <div class="flow-note"><i>1</i><div><b>Brygadzista opisuje miejsce i priorytet</b><small>System przypisuje zgłoszeniu właściciela i czas.</small></div><span>→</span><i>2</i><div><b>Dział techniczny aktualizuje postęp</b><small>Historia pozostaje widoczna aż do zamknięcia.</small></div></div>`;
   }
 
@@ -185,6 +255,11 @@
     if (state.modal === "finish-task") return `<div class="modal-backdrop"><section class="modal" role="dialog" aria-label="Zapisz wynik pracy"><div class="modal-head"><div><span class="kicker">FORMULARZ</span><h2>Zapisz wynik pracy</h2></div>${close}</div><form data-form="finish-task"><div class="hint"><b>i</b><span>System przeliczy wydajność dopiero po podaniu ilości i efektywnego czasu.</span></div><div class="form-2"><label class="field"><span>Wykonana ilość</span><input name="result" type="number" step="0.1" required placeholder="np. 6"></label><label class="field"><span>Efektywny czas (h)</span><input name="hours" type="number" step="0.25" required placeholder="np. 6"></label></div><div class="modal-actions"><button type="button" class="ghost" data-action="close-modal">Anuluj</button><button class="primary">Zapisz i przelicz</button></div></form></section></div>`;
     if (state.modal === "observation") return `<div class="modal-backdrop"><section class="modal" role="dialog" aria-label="Nowa obserwacja"><div class="modal-head"><div><span class="kicker">R${String(state.selectedRow).padStart(2,"0")}</span><h2>Nowa obserwacja</h2></div>${close}</div><form data-form="observation"><label class="field"><span>Objaw</span><input name="symptom" required placeholder="np. Nietypowe plamy"></label><div class="form-2"><label class="field"><span>Liczba roślin</span><input name="plants" type="number" min="1" value="1" required></label><label class="field"><span>Poziom</span><select name="severity"><option value="watch">Obserwacja</option><option value="medium">Średni</option><option value="high">Wysoki</option></select></label></div><div class="modal-actions"><button type="button" class="ghost" data-action="close-modal">Anuluj</button><button class="primary">Zapisz obserwację</button></div></form></section></div>`;
     if (state.modal === "ticket") return `<div class="modal-backdrop"><section class="modal" role="dialog" aria-label="Nowe zgłoszenie techniczne"><div class="modal-head"><div><span class="kicker">UTRZYMANIE RUCHU</span><h2>Nowe zgłoszenie</h2></div>${close}</div><form data-form="ticket"><label class="field"><span>Co się stało?</span><input name="title" required placeholder="Krótki opis usterki"></label><div class="form-2"><label class="field"><span>Miejsce</span><input name="place" required placeholder="np. R09 · kotłownia"></label><label class="field"><span>Priorytet</span><select name="priority"><option>Średni</option><option>Wysoki</option><option>Krytyczny</option></select></label></div><div class="modal-actions"><button type="button" class="ghost" data-action="close-modal">Anuluj</button><button class="primary">Wyślij zgłoszenie</button></div></form></section></div>`;
+    if (state.modal === "new-plan") return `<div class="modal-backdrop"><section class="modal" role="dialog" aria-label="Dodaj pozycję planu"><div class="modal-head"><div><span class="kicker">PLAN ZMIANY</span><h2>Dodaj pozycję planu</h2></div>${close}</div><form data-form="new-plan"><div class="form-2"><label class="field"><span>Od–do</span><input name="time" value="10:30–13:30" required></label><label class="field"><span>Strefa / rzędy</span><input name="zone" placeholder="np. S2 · R19–R24" required></label></div><label class="field"><span>Rodzaj pracy</span><select name="title"><option>Obcinanie liści</option><option>Zakładanie zawieszek</option><option>Zbiór</option><option>Sortowanie i porządek</option></select></label><div class="form-2"><label class="field"><span>Potrzebna obsada</span><input name="need" type="number" min="1" value="2" required></label><label class="field"><span>Jednostka wyniku</span><select name="unit"><option>rz./h</option><option>kg/h</option></select></label></div><div class="modal-actions"><button type="button" class="ghost" data-action="close-modal">Anuluj</button><button class="primary">Dodaj do planu</button></div></form></section></div>`;
+    if (state.modal === "reassign-task") { const task=state.tasks.find((item)=>item.id===state.selectedTask); return `<div class="modal-backdrop"><section class="modal" role="dialog" aria-label="Zmień obsadę zadania"><div class="modal-head"><div><span class="kicker">${task.row} · ${task.title}</span><h2>Zmień obsadę</h2></div>${close}</div><form data-form="reassign-task"><label class="field"><span>Pracownik dostępny</span><select name="employee">${state.employees.filter((employee)=>employee.status==="Obecny").map((employee)=>`<option>${employee.name}</option>`).join("")}</select></label><label class="field"><span>Sposób zmiany</span><select name="mode"><option value="add">Dodaj do obsady</option><option value="replace">Zastąp pierwszą osobę</option></select></label><div class="modal-actions"><button type="button" class="ghost" data-action="close-modal">Anuluj</button><button class="primary">Zapisz obsadę</button></div></form></section></div>`; }
+    if (state.modal === "employee") { const employee=state.employees.find((item)=>item.id===state.selectedEmployee); const detail=employeeDetails[employee.id]; return `<div class="modal-backdrop"><section class="modal" role="dialog" aria-label="Karta pracownika"><div class="modal-head"><div><span class="kicker">${employee.code}</span><h2>${employee.name}</h2></div>${close}</div><div class="employee-card"><div class="profile-line"><i class="avatar">${initials(employee.name)}</i><div><span>Status dzisiaj</span><b>${employee.status}</b></div><div><span>Bilans godzin</span><b>${detail.balance}</b></div></div><div class="profile-block"><span>Kompetencje</span><div class="skill-list">${detail.skills.map((skill)=>`<i>${skill}</i>`).join("")}</div></div><div class="profile-block"><span>Poziom samodzielności</span><b>${detail.level}</b></div><div class="profile-block"><span>Najbliższy dokument</span><b>${detail.certificate}</b></div><div class="hint"><b>i</b><span>W docelowym systemie karta pokaże historię przydziałów, wydajność według typu pracy i szkolenia.</span></div></div><div class="modal-actions"><button class="secondary" data-action="close-modal">Zamknij</button></div></section></div>`; }
+    if (state.modal === "material-request") return `<div class="modal-backdrop"><section class="modal" role="dialog" aria-label="Zgłoś zapotrzebowanie"><div class="modal-head"><div><span class="kicker">ZAPOTRZEBOWANIE</span><h2>Zamów materiał</h2></div>${close}</div><form data-form="material-request"><label class="field"><span>Materiał</span><select name="material">${state.materials.map((item)=>`<option value="${item.id}">${item.name}</option>`).join("")}</select></label><div class="form-2"><label class="field"><span>Ilość</span><input name="quantity" type="number" min="1" value="10" required></label><label class="field"><span>Potrzebne do</span><input name="needed" type="date" value="2026-08-06" required></label></div><label class="field"><span>Uzasadnienie</span><textarea name="reason" rows="3" placeholder="Do jakiej pracy materiał jest potrzebny?"></textarea></label><div class="modal-actions"><button type="button" class="ghost" data-action="close-modal">Anuluj</button><button class="primary">Wyślij zapotrzebowanie</button></div></form></section></div>`;
+    if (state.modal === "issue-material") { const item=state.materials.find((material)=>material.id===state.selectedMaterial); return `<div class="modal-backdrop"><section class="modal" role="dialog" aria-label="Wydaj materiał"><div class="modal-head"><div><span class="kicker">${item.sku}</span><h2>Wydaj: ${item.name}</h2></div>${close}</div><form data-form="issue-material"><div class="hint"><b>${item.quantity}</b><span>${item.unit} dostępnych · minimum ${item.min} ${item.unit}</span></div><div class="form-2"><label class="field"><span>Ilość do wydania</span><input name="quantity" type="number" min="1" max="${item.quantity}" value="1" required></label><label class="field"><span>Przypisz do zadania</span><select name="task">${state.tasks.filter((task)=>task.status!=="Zakończone").map((task)=>`<option>${task.row} · ${task.title}</option>`).join("")}</select></label></div><div class="modal-actions"><button type="button" class="ghost" data-action="close-modal">Anuluj</button><button class="primary">Potwierdź wydanie</button></div></form></section></div>`; }
     if (state.modal === "close") { const block = blockers(); return `<div class="modal-backdrop"><section class="modal" role="dialog" aria-label="Kontrola przed zamknięciem zmiany"><div class="modal-head"><div><span class="kicker">KONTROLA</span><h2>Przed zamknięciem zmiany</h2></div>${close}</div><div class="checklist"><div class="check ${block.some((item)=>item.includes("status"))?"error":""}"><i>${block.some((item)=>item.includes("status"))?"!":"✓"}</i><b>Obecność i godziny są kompletne</b><small>${block.some((item)=>item.includes("status"))?"Wymaga działania":"Gotowe"}</small></div><div class="check ${block.some((item)=>item.includes("wynik"))?"error":""}"><i>${block.some((item)=>item.includes("wynik"))?"!":"✓"}</i><b>Zakończone prace mają wynik</b><small>${block.some((item)=>item.includes("wynik"))?"Wymaga działania":"Gotowe"}</small></div><div class="check"><i>✓</i><b>Wyjątki mają właściciela i status</b><small>Gotowe</small></div></div>${block.length ? `<div class="blocker"><b>Nie można zamknąć zmiany</b>${block.map((item)=>`<p>• ${item}</p>`).join("")}</div>` : `<div class="ready"><b>Zmiana jest gotowa do zamknięcia.</b><p>Dane trafią do raportu kierownika.</p></div>`}<div class="modal-actions"><button class="ghost" data-action="close-modal">Wróć</button><button class="primary" data-action="confirm-close" ${block.length||state.shiftClosed?"disabled":""}>${state.shiftClosed?"Zmiana zamknięta":"Zatwierdź i zamknij"}</button></div></section></div>`; }
     return "";
   }
@@ -195,13 +270,20 @@
     return `<div class="drawer-backdrop"><aside class="drawer"><div class="modal-head"><div><span class="kicker">PODSUMOWANIE TESTÓW</span><h2>Uwagi do makiety</h2></div><button class="icon-btn" data-action="close-feedback">×</button></div>${entries.length ? `<div class="feedback-list">${entries.map(([key,value])=>`<article class="feedback-item"><span class="${value.value==="fit"?"ok":"no"}">${value.value==="fit"?"PASUJE":"DO ZMIANY"}</span><b>${key.replace(":"," · ")}</b><small>${esc(value.note||"Bez komentarza")}</small></article>`).join("")}</div>` : `<div class="empty"><b>Brak uwag</b><p>Oceń dowolny ekran na dolnym pasku.</p></div>`}<button class="secondary wide" data-action="export-feedback">Pobierz wszystkie uwagi</button></aside></div>`;
   }
 
+  function notificationsDrawer() {
+    if (!state.notificationsOpen) return "";
+    const unread = state.notifications.filter((item)=>!item.read).length;
+    return `<div class="drawer-backdrop"><aside class="drawer notification-drawer"><div class="modal-head"><div><span class="kicker">CENTRUM UWAGI</span><h2>Powiadomienia</h2></div><button class="icon-btn" data-action="close-notifications">×</button></div><div class="drawer-summary"><b>${unread} nowe</b><button class="mini-link" data-action="read-all">Oznacz wszystkie jako przeczytane</button></div><div class="notification-list">${state.notifications.map((item)=>`<article class="notification ${item.read?"read":""}"><i class="dot ${item.tone}"></i><div><b>${item.title}</b><small>${item.detail}</small></div><button class="ghost" data-action="open-notification" data-id="${item.id}">Otwórz</button></article>`).join("")}</div><div class="logic-note"><b>Docelowo</b><span>Powiadomienia powstają z terminów, niskich stanów, braków obsady, przekroczonego SLA i decyzji oczekujących na akceptację.</span></div></aside></div>`;
+  }
+
   function renderApp() {
     const nav = visibleNav(); const index = nav.findIndex((item) => item[0] === state.screen);
-    const screens = { dashboard, attendance, tasks, productivity, crop, tickets, reports };
+    const screens = { dashboard, planning, attendance, tasks, productivity, team, crop, tickets, materials, reports };
+    const unread = state.notifications.filter((item)=>!item.read).length;
     return `<div class="shell"><aside class="sidebar"><div class="brand"><span>CITR</span><i>O</i><span>NEX</span></div><small class="brand-sub">GREENHOUSE MANAGER · DJANGO</small><nav class="nav" aria-label="Nawigacja główna">${nav.map((item)=>`<button class="${state.screen===item[0]?"active":""}" data-nav="${item[0]}"><i>${item[3]}</i>${item[1]}</button>`).join("")}</nav><div class="role-switch"><span class="kicker light">PODGLĄD ROLI</span><select data-change="role" aria-label="Zmień rolę">${roles.map((role)=>`<option ${state.role===role?"selected":""}>${role}</option>`).join("")}</select></div><button class="user" data-action="logout"><i class="avatar">AK</i><span><b>Anna Kowalska</b><small>${state.role}</small></span><span>↩</span></button></aside>
-      <div class="workspace"><header class="topbar"><div class="shift-info"><span>BIEŻĄCA ZMIANA</span><b>05.08.2026 · Zmiana poranna</b></div><div class="top-actions"><button class="review-toggle" data-action="toggle-review">● Tryb oceny makiety</button><span class="state-pill ${state.shiftClosed?"closed":""}">${state.shiftClosed?"ZAMKNIĘTA":"W TRAKCIE"}</span></div></header><main class="content">${screens[state.screen]()}</main><div class="journey"><button data-nav="${nav[Math.max(0,index-1)][0]}" ${index<=0?"disabled":""}>← Poprzedni</button><div class="steps">${nav.map((item,i)=>`<button class="${i<index?"done":""} ${i===index?"active":""}" data-nav="${item[0]}"><i>${i+1}</i><small>${item[2]}</small></button>`).join("")}</div><button data-nav="${nav[Math.min(nav.length-1,index+1)][0]}" ${index>=nav.length-1?"disabled":""}>Następny →</button></div></div>
+      <div class="workspace"><header class="topbar"><div class="shift-info"><span>BIEŻĄCA ZMIANA</span><b>05.08.2026 · Zmiana poranna</b></div><div class="top-actions"><button class="notification-button" data-action="open-notifications" aria-label="Powiadomienia">●<span>Powiadomienia</span>${unread?`<b>${unread}</b>`:""}</button><button class="review-toggle" data-action="toggle-review">● Tryb oceny makiety</button><span class="state-pill ${state.shiftClosed?"closed":""}">${state.shiftClosed?"ZAMKNIĘTA":"W TRAKCIE"}</span></div></header><main class="content">${screens[state.screen]()}</main><div class="journey"><button data-nav="${nav[Math.max(0,index-1)][0]}" ${index<=0?"disabled":""}>← Poprzedni</button><div class="steps">${nav.map((item,i)=>`<button class="${i<index?"done":""} ${i===index?"active":""}" data-nav="${item[0]}"><i>${i+1}</i><small>${item[2]}</small></button>`).join("")}</div><button data-nav="${nav[Math.min(nav.length-1,index+1)][0]}" ${index>=nav.length-1?"disabled":""}>Następny →</button></div></div>
       ${state.review ? `<section class="review-bar"><div class="review-context"><i>●</i><span><b>Ocena: ${navItems.find((item)=>item[0]===state.screen)[1]}</b><small>${state.role} · zapis lokalny</small></span></div><input id="review-note" placeholder="Co zostawić albo zmienić?" aria-label="Komentarz do makiety"><button class="fit" data-action="feedback-fit">✓ Pasuje</button><button class="change" data-action="feedback-change">↺ Do zmiany</button><button class="feedback-open" data-action="open-feedback">Uwagi <b>${Object.keys(state.feedback).length}</b></button></section>`:""}
-      ${modalHtml()}${feedbackDrawer()}${state.toast?`<div class="toast" role="status"><i>✓</i>${esc(state.toast)}</div>`:""}</div>`;
+      ${modalHtml()}${feedbackDrawer()}${notificationsDrawer()}${state.toast?`<div class="toast" role="status"><i>✓</i>${esc(state.toast)}</div>`:""}</div>`;
   }
 
   function render() { app.innerHTML = state.loggedIn ? renderApp() : renderLogin(); }
@@ -215,15 +297,32 @@
     else if (action === "login") { state.loggedIn = true; if (!access[state.role].includes(state.screen)) state.screen = access[state.role][0]; history.replaceState(null,"",`#${state.screen}`); render(); }
     else if (action === "logout") { state.loggedIn = false; history.replaceState(null,"",location.pathname); render(); }
     else if (action === "toggle-review") { state.review = !state.review; render(); }
+    else if (action === "new-plan" || action === "edit-plan") { state.modal = "new-plan"; render(); }
+    else if (action === "fill-plan") { const item=state.plan.find((plan)=>plan.id===Number(button.dataset.id)); item.assigned=Math.min(item.need,item.assigned+1); const alert=state.notifications.find((notice)=>notice.id===2); if(state.plan.every((plan)=>plan.assigned>=plan.need))alert.read=true; notify("Obsada pozycji została uzupełniona"); }
+    else if (action === "fill-all-plan") { state.plan.forEach((item)=>{item.assigned=item.need;}); state.notifications.find((item)=>item.id===2).read=true; notify("System uzupełnił luki dostępnymi pracownikami"); }
+    else if (action === "publish-plan") { if(state.plan.every((item)=>item.assigned>=item.need)){state.planPublished=true;notify("Plan opublikowany dla całej brygady");} }
     else if (action === "new-task") { state.modal = "new-task"; render(); }
     else if (action === "finish-task") { state.selectedTask = Number(button.dataset.id); state.modal = "finish-task"; render(); }
+    else if (action === "toggle-task") { const task=state.tasks.find((item)=>item.id===Number(button.dataset.id)); task.status=task.status==="Wstrzymane"?"W trakcie":"Wstrzymane"; notify(task.status==="Wstrzymane"?"Praca została wstrzymana":"Praca została wznowiona"); }
+    else if (action === "reassign-task") { state.selectedTask=Number(button.dataset.id); state.modal="reassign-task"; render(); }
+    else if (action === "employee-detail") { state.selectedEmployee=Number(button.dataset.id); state.modal="employee"; render(); }
     else if (action === "new-observation") { state.modal = "observation"; render(); }
+    else if (action === "resolve-observation") { state.observations=state.observations.filter((item)=>item.row!==state.selectedRow); notify("Alert uprawy został zamknięty z zapisem historii"); }
     else if (action === "new-ticket") { state.modal = "ticket"; render(); }
+    else if (action === "material-request") { state.modal="material-request"; render(); }
+    else if (action === "issue-material") { state.selectedMaterial=Number(button.dataset.id); state.modal="issue-material"; render(); }
+    else if (action === "order-material") { state.notifications.find((item)=>item.id===3).read=true; notify("Utworzono zapotrzebowanie do akceptacji"); }
+    else if (action === "request-low") { state.modal="material-request"; render(); }
     else if (action === "select-row") { state.selectedRow = Number(button.dataset.row); render(); }
     else if (action === "open-close") { state.modal = "close"; render(); }
     else if (action === "close-modal") { state.modal = null; render(); }
     else if (action === "confirm-close") { if (!blockers().length) { state.shiftClosed = true; state.modal = null; notify("Zmiana została zamknięta"); } }
     else if (action === "save-attendance") notify("Lista obecności zapisana");
+    else if (action === "approve-item") { state.approvedItems.push(button.dataset.id); notify("Decyzja zatwierdzona i zapisana w historii"); }
+    else if (action === "open-notifications") { state.notificationsOpen=true; render(); }
+    else if (action === "close-notifications") { state.notificationsOpen=false; render(); }
+    else if (action === "read-all") { state.notifications.forEach((item)=>{item.read=true;}); render(); }
+    else if (action === "open-notification") { const item=state.notifications.find((notification)=>notification.id===Number(button.dataset.id)); item.read=true; state.notificationsOpen=false; navigate(item.screen); }
     else if (action === "feedback-fit" || action === "feedback-change") { const note = document.getElementById("review-note")?.value.trim() || ""; state.feedback[`${state.role}:${state.screen}`] = { value: action === "feedback-fit" ? "fit" : "change", note }; saveFeedbackState(); notify(action === "feedback-fit" ? "Zapisano: ekran pasuje" : "Zapisano: ekran do zmiany"); }
     else if (action === "open-feedback") { state.feedbackOpen = true; render(); }
     else if (action === "close-feedback") { state.feedbackOpen = false; render(); }
@@ -241,9 +340,13 @@
   app.addEventListener("submit", (event) => {
     const form = event.target.closest("form[data-form]"); if (!form) return; event.preventDefault(); const data = new FormData(form);
     if (form.dataset.form === "new-task") { state.tasks.push({ id:Date.now(), title:data.get("title"), row:data.get("row"), side:"Lewa", people:[data.get("employee")], status:"W trakcie", unit:data.get("unit"), progress:0 }); state.modal=null; notify("Nowa praca została przydzielona"); }
+    if (form.dataset.form === "new-plan") { const need=Number(data.get("need")); state.plan.push({id:Date.now(),time:data.get("time"),zone:data.get("zone"),title:data.get("title"),need,assigned:0,status:"Wymaga obsady",unit:data.get("unit")}); state.planPublished=false; state.modal=null; notify("Pozycja dodana do planu"); }
+    if (form.dataset.form === "reassign-task") { const task=state.tasks.find((item)=>item.id===state.selectedTask); const employee=data.get("employee"); if(data.get("mode")==="replace")task.people[0]=employee;else if(!task.people.includes(employee))task.people.push(employee); state.modal=null; notify("Obsada zadania została zmieniona"); }
     if (form.dataset.form === "finish-task") { const result=Number(data.get("result")); const hours=Number(data.get("hours")); if(!result||!hours){notify("Podaj ilość i efektywny czas");return;} const task=state.tasks.find((item)=>item.id===state.selectedTask); Object.assign(task,{status:"Zakończone",progress:100,result,hours}); state.modal=null; notify("Wynik zapisany. Wydajność przeliczona."); }
     if (form.dataset.form === "observation") { state.observations=state.observations.filter((item)=>item.row!==state.selectedRow); state.observations.push({row:state.selectedRow,severity:data.get("severity"),symptom:data.get("symptom"),plants:Number(data.get("plants"))}); state.modal=null; notify(`Obserwacja dla R${String(state.selectedRow).padStart(2,"0")} zapisana`); }
-    if (form.dataset.form === "ticket") { state.tickets.push({id:Date.now(),title:data.get("title"),place:data.get("place"),priority:data.get("priority"),status:"Nowe",owner:"Anna Kowalska"}); state.modal=null; notify("Zgłoszenie przekazane do działu technicznego"); }
+    if (form.dataset.form === "ticket") { const priority=data.get("priority"); state.tickets.push({id:Date.now(),title:data.get("title"),place:data.get("place"),priority,status:"Nowe",owner:"Anna Kowalska",sla:priority==="Krytyczny"?"45 min":priority==="Wysoki"?"2 h":"8 h"}); state.modal=null; notify("Zgłoszenie przekazane do działu technicznego"); }
+    if (form.dataset.form === "material-request") { state.modal=null; notify("Zapotrzebowanie wysłane do akceptacji"); }
+    if (form.dataset.form === "issue-material") { const item=state.materials.find((material)=>material.id===state.selectedMaterial); const quantity=Number(data.get("quantity")); if(!quantity||quantity>item.quantity){notify("Sprawdź ilość do wydania");return;} item.quantity-=quantity; state.modal=null; notify(`Wydano ${quantity} ${item.unit} i zapisano przy zadaniu`); }
   });
 
   function exportJson(filename, payload) { const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}); const url=URL.createObjectURL(blob); const link=document.createElement("a"); link.href=url; link.download=filename; link.click(); URL.revokeObjectURL(url); }

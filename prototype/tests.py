@@ -6,11 +6,14 @@ class PrototypePageTests(SimpleTestCase):
     pages = {
         "login": "login",
         "dashboard": "dashboard",
+        "planning": "planning",
         "attendance": "attendance",
         "tasks": "tasks",
         "productivity": "productivity",
+        "team": "team",
         "crop": "crop",
         "tickets": "tickets",
+        "materials": "materials",
         "reports": "reports",
     }
 
@@ -26,4 +29,3 @@ class PrototypePageTests(SimpleTestCase):
         response = self.client.get(reverse("login"))
         self.assertContains(response, "/static/prototype/styles.css")
         self.assertContains(response, "/static/prototype/app.js")
-
