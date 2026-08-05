@@ -2,6 +2,10 @@
 
 Publiczna makieta aplikacji zastępującej zeszyty brygadzistów w szklarni. Repozytorium zawiera prawdziwy projekt Django oraz identyczną wersję demonstracyjną w katalogu `docs/`, publikowaną przez GitHub Pages.
 
+## Demo online
+
+**[Otwórz klikalną makietę](https://oleksandrkiris.github.io/greenhouse-manager-django-prototype/)**
+
 ## Co można sprawdzić
 
 - logowanie i wybór roli,
