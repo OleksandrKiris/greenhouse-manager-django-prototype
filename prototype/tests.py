@@ -31,7 +31,20 @@ class PrototypePageTests(SimpleTestCase):
         response = self.client.get(reverse("login"))
         self.assertContains(response, "/static/prototype/styles.css")
         self.assertContains(response, "/static/prototype/planning.css")
+        self.assertContains(response, "/static/prototype/visual-refresh.css")
+        self.assertContains(response, "/static/prototype/brand-logo.svg")
         self.assertContains(response, "/static/prototype/app.js")
+
+    def test_brand_logo_and_visual_refresh_are_connected(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        script = (static_dir / "app.js").read_text(encoding="utf-8")
+        visual_styles = (static_dir / "visual-refresh.css").read_text(encoding="utf-8")
+        logo = (static_dir / "brand-logo.svg").read_text(encoding="utf-8")
+        self.assertIn("applyBrandLogo", script)
+        self.assertIn("brand-logo.svg", script)
+        self.assertIn(".brand-logo", visual_styles)
+        self.assertIn(".login-card", visual_styles)
+        self.assertIn("<svg", logo)
 
     def test_work_completion_tracks_people_location_and_carts(self):
         script = (Path(__file__).parent / "static" / "prototype" / "app.js").read_text(encoding="utf-8")

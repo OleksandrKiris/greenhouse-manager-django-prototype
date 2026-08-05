@@ -390,7 +390,14 @@
       ${modalHtml()}${feedbackDrawer()}${notificationsDrawer()}${state.toast?`<div class="toast" role="status"><i>✓</i>${esc(state.toast)}</div>`:""}</div>`;
   }
 
-  function render() { app.innerHTML = state.loggedIn ? renderApp() : renderLogin(); }
+  function applyBrandLogo() {
+    const prefix=app.dataset.assetsPrefix||"";
+    app.querySelectorAll(".brand").forEach((brand)=>{
+      brand.innerHTML=`<img class="brand-logo" src="${prefix}brand-logo.svg" alt="Logo firmy"><span class="brand-product"><b>Greenhouse</b><small>Manager</small></span>`;
+    });
+  }
+
+  function render() { app.innerHTML = state.loggedIn ? renderApp() : renderLogin(); applyBrandLogo(); }
 
   app.addEventListener("click", (event) => {
     const nav = event.target.closest("[data-nav]");
