@@ -22,6 +22,12 @@
     materialOrderCreated: false,
     reportApproved: false,
     handover: null,
+    planVersions: {},
+    planAcknowledgements: {},
+    planCompareSite: "",
+    pauseReasons: {},
+    pauseTaskId: null,
+    shiftClock: "08:20",
     scheduleSaved: false,
     expandedTimeCards: [],
     listDensity: "compact",
@@ -63,7 +69,7 @@
   }
 
   function saveFeaturePreferences() {
-    const allowed = ["workDate", "shift", "scope", "attendanceFilter", "taskFilter", "productivityUnit", "teamFilter", "cropFilter", "listDensity", "listLimits", "handover"];
+    const allowed = ["workDate", "shift", "scope", "attendanceFilter", "taskFilter", "productivityUnit", "teamFilter", "cropFilter", "listDensity", "listLimits", "handover", "planVersions", "planAcknowledgements", "pauseReasons"];
     const snapshot = Object.fromEntries(allowed.map((key) => [key, featureState[key]]));
     try { localStorage.setItem(FEATURE_PREFERENCES_KEY, JSON.stringify(snapshot)); } catch (_) { /* Preferences remain optional. */ }
   }
@@ -410,6 +416,81 @@
     return [item.site, item.greenhouseSide, nave, item.entrance, item.passageSide].filter(Boolean).join(" · ");
   }
 
+  function cloneValue(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function planSite() {
+    return context.state.role === "Kierownik" ? context.state.selectedPlanSite : context.state.selectedSite;
+  }
+
+  function planSiteSnapshot(site) {
+    return cloneValue(context.state.plan.filter((item) => item.site === site));
+  }
+
+  function ensurePlanVersion(site = planSite()) {
+    if (!Array.isArray(featureState.planVersions[site]) || !featureState.planVersions[site].length) {
+      featureState.planVersions[site] = [{ number: 1, author: "Kierownik produkcji", createdAt: "05.08.2026 · 05:42", items: planSiteSnapshot(site) }];
+      featureState.planAcknowledgements[site] = { version: 1, people: {} };
+      saveFeaturePreferences();
+    }
+    return featureState.planVersions[site];
+  }
+
+  function recordPlanVersion(site = planSite()) {
+    const versions = ensurePlanVersion(site);
+    const version = { number: versions[versions.length - 1].number + 1, author: "Kierownik produkcji", createdAt: `${featureState.workDate} · teraz`, items: planSiteSnapshot(site) };
+    versions.push(version);
+    featureState.planAcknowledgements[site] = { version: version.number, people: {} };
+    featureState.planCompareSite = "";
+    saveFeaturePreferences();
+    return version;
+  }
+
+  function planVersionDifferences(site) {
+    const versions = ensurePlanVersion(site);
+    if (versions.length < 2) return [];
+    const previous = versions[versions.length - 2];
+    const current = versions[versions.length - 1];
+    const fields = { time: "godziny", title: "rodzaj pracy", nave: "nawa", naveEnd: "zakres naw", assigned: "obsada", need: "zapotrzebowanie", foreman: "brygadzista", target: "norma", instructions: "instrukcja" };
+    const previousById = new Map(previous.items.map((item) => [item.id, item]));
+    const currentById = new Map(current.items.map((item) => [item.id, item]));
+    const changes = [];
+    current.items.forEach((item) => {
+      const old = previousById.get(item.id);
+      if (!old) return changes.push({ title: item.title, detail: "Dodano nową pozycję" });
+      const changed = Object.entries(fields).filter(([field]) => String(old[field] ?? "") !== String(item[field] ?? "")).map(([, label]) => label);
+      if (changed.length) changes.push({ title: item.title, detail: `Zmieniono: ${changed.join(", ")}` });
+    });
+    previous.items.filter((item) => !currentById.has(item.id)).forEach((item) => changes.push({ title: item.title, detail: "Usunięto pozycję" }));
+    return changes;
+  }
+
+  function planVersionPanel() {
+    const site = planSite();
+    const versions = ensurePlanVersion(site);
+    const current = versions[versions.length - 1];
+    const responsibility = context.siteResponsibility.find((item) => item.site === site);
+    const foremen = responsibility?.foremen || [responsibility?.chief || "Brygadzista"];
+    const acknowledgements = featureState.planAcknowledgements[site]?.version === current.number ? featureState.planAcknowledgements[site].people : {};
+    const confirmed = foremen.filter((name) => acknowledgements[name]).length;
+    const compare = featureState.planCompareSite === site;
+    const differences = compare ? planVersionDifferences(site) : [];
+    const published = context.state.planPublication[site];
+    return `<section class="v7-plan-version ${published ? "published" : "draft"}"><header><div><span class="kicker">WERSJA I POTWIERDZENIA</span><h3>Plan ${escapeHtml(site)} · wersja ${current.number}</h3><p>${published ? `Opublikowany ${escapeHtml(current.createdAt)} przez ${escapeHtml(current.author)}.` : `Zmiany robocze po wersji ${current.number}; brygadziści nadal realizują ostatnią publikację.`}</p></div><span><b>V${current.number}</b><small>${published ? "opublikowana" : "robocza"}</small></span></header><div class="v7-version-body"><div class="v7-ack-list">${foremen.map((name) => `<span class="${acknowledgements[name] ? "done" : "waiting"}"><i>${acknowledgements[name] ? "✓" : "…"}</i><span><b>${escapeHtml(name)}</b><small>${acknowledgements[name] ? `potwierdził ${escapeHtml(acknowledgements[name])}` : "oczekuje na potwierdzenie"}</small></span></span>`).join("")}</div><div class="v7-version-actions"><span><b>${confirmed}/${foremen.length}</b><small>potwierdziło wersję</small></span>${context.state.role === "Kierownik" ? `<button class="secondary" data-module-action="compare-plan-version" ${versions.length < 2 ? "disabled" : ""}>${compare ? "Ukryj porównanie" : "Porównaj wersje"}</button><button class="secondary" data-module-action="rollback-plan-version" ${versions.length < 2 ? "disabled" : ""}>Przywróć poprzednią</button>` : `<button class="primary" data-module-action="confirm-plan-version" ${acknowledgements[responsibility?.chief] ? "disabled" : ""}>${acknowledgements[responsibility?.chief] ? "✓ Potwierdzono" : `Potwierdź wersję ${current.number}`}</button>`}</div></div>${compare ? `<div class="v7-version-compare"><header><b>V${versions[versions.length - 2].number} → V${current.number}</b><small>${differences.length ? `${differences.length} zmian` : "brak różnic danych"}</small></header>${differences.map((change) => `<span><i>↕</i><b>${escapeHtml(change.title)}</b><small>${escapeHtml(change.detail)}</small></span>`).join("") || `<p>Wersję opublikowano ponownie bez zmiany pozycji.</p>`}</div>` : ""}</section>`;
+  }
+
+  function chiefForemanPanel() {
+    if (context.state.role !== "Brygadzista") return "";
+    const site = context.state.selectedSite;
+    const responsibility = context.siteResponsibility.find((item) => item.site === site);
+    if (!responsibility) return "";
+    const tasks = context.state.tasks.filter((task) => task.site === site && task.status !== "Zakończone");
+    const issues = openTickets().filter((ticket) => ticket.site === site && ticket.priority === "Krytyczny").length;
+    const assignedPeople = new Set(tasks.flatMap((task) => task.people || [])).size;
+    return `<section class="v7-chief-panel"><header><div><span class="kicker">GŁÓWNY BRYGADZISTA · ${escapeHtml(site)}</span><h2>${escapeHtml(responsibility.chief)} nadzoruje całą szklarnię</h2><p>Najpierw widać brygady, ich obciążenie i miejsca wymagające decyzji.</p></div><span><b>${responsibility.people}</b><small>osób łącznie</small></span></header><div class="v7-foreman-grid">${responsibility.teams.map((team) => { const foremanTasks = tasks.filter((task) => task.foreman === team.foreman); const sampleAssigned = new Set(foremanTasks.flatMap((task) => task.people || [])).size; const average = foremanTasks.length ? Math.round(foremanTasks.reduce((sum, task) => sum + Number(task.progress || 0), 0) / foremanTasks.length) : 0; return `<article><div><i>${team.foreman === responsibility.chief ? "G" : "B"}</i><span><b>${escapeHtml(team.foreman)}</b><small>${team.foreman === responsibility.chief ? "główny brygadzista" : "brygadzista realizujący"}</small></span><em>${foremanTasks.length ? "W realizacji" : "Gotowy"}</em></div><div class="v7-foreman-metrics"><span><small>Brygada</small><b>${team.people} os.</b></span><span><small>Aktywne prace</small><b>${foremanTasks.length}</b></span><span><small>Widoczni w pracach</small><b>${sampleAssigned}</b></span><span><small>Średni postęp</small><b>${average}%</b></span></div><button class="secondary" data-module-action="focus-foreman" data-foreman="${escapeHtml(team.foreman)}">Zobacz prace brygady →</button></article>`; }).join("")}</div><footer><span><small>Przypisani w aktywnych pracach</small><b>${assignedPeople}</b></span><span><small>Wolni w podglądzie</small><b>${resourceState().availablePeople.length}</b></span><span class="${issues ? "attention" : ""}"><small>Problemy krytyczne</small><b>${issues}</b></span><button class="primary" data-nav="tasks">Przenieś ludzi między brygadami</button></footer></section>`;
+  }
+
   function taskForPlan(plan) {
     return context.state.tasks.find((task) => task.planId === plan.id)
       || context.state.tasks.find((task) => task.site === plan.site && task.title === plan.title && task.nave === plan.nave);
@@ -417,19 +498,20 @@
 
   function executionSnapshot(plan) {
     const task = taskForPlan(plan);
+    const pause = featureState.pauseReasons[task?.id];
     const finished = task?.status === "Zakończone";
     const blocked = task?.status === "Wstrzymane" || !task && plan.assigned < plan.need;
     const rate = finished && task.hours
       ? `${(task.result / task.hours).toFixed(task.unit === "kg" ? 0 : 2)} ${task.unit}/h`
       : task ? `${task.progress || 0}%` : "0%";
     const plannedEnd = String(plan.time || "").split(/[–-]/).pop() || "—";
-    const forecast = finished ? "Zakończono" : blocked ? "Wymaga decyzji" : task && (task.progress || 0) < 50 ? `ryzyko po ${plannedEnd}` : task ? `około ${plannedEnd}` : "Nie rozpoczęto";
+    const forecast = finished ? "Zakończono" : blocked ? (pause?.reason || "Wymaga decyzji") : task && (task.progress || 0) < 50 ? `ryzyko po ${plannedEnd}` : task ? `około ${plannedEnd}` : "Nie rozpoczęto";
     return {
       task,
       rate,
       forecast,
       tone: finished ? "done" : blocked ? "blocked" : task ? "active" : "pending",
-      status: finished ? "Wykonane" : blocked ? (task?.status || "Brak obsady") : task ? "W realizacji" : "Do rozpoczęcia",
+      status: finished ? "Wykonane" : blocked ? (pause ? `Przestój: ${pause.reason}` : task?.status || "Brak obsady") : task ? "W realizacji" : "Do rozpoczęcia",
     };
   }
 
@@ -459,15 +541,74 @@
     return `<form class="v6-bulk-assignment" data-v6-form="bulk-assignment"><header><div><span class="kicker">OPERACJE GRUPOWE</span><h3>Przenieś całą grupę do innej pracy</h3><p>Jedna operacja usuwa ludzi z poprzednich aktywnych prac i zapisuje ich przy nowym zadaniu.</p></div><span><b>${tasks.length}</b><small>aktywnych prac</small></span></header><div><label><span>Grupa</span><select name="group">${groups.map((group) => `<option value="${group.id}">${group.label} · ${group.people.length} os.</option>`).join("")}</select></label><label><span>Praca docelowa</span><select name="task" ${tasks.length ? "" : "disabled"}>${tasks.map((task) => `<option value="${task.id}">${escapeHtml(task.title)} · ${escapeHtml(task.nave)} · ${escapeHtml(task.foreman)}</option>`).join("")}</select></label><label><span>Sposób</span><select name="mode"><option value="move">Przenieś z innych prac</option><option value="free">Dodaj tylko wolnych</option></select></label><button class="primary" ${tasks.length ? "" : "disabled"}>Zastosuj do grupy</button></div></form>`;
   }
 
+  function timeValue(value) {
+    const match = String(value || "").match(/(\d{2}):(\d{2})/);
+    return match ? Number(match[1]) * 60 + Number(match[2]) : 0;
+  }
+
+  function shiftTimelinePanel() {
+    const now = timeValue(featureState.shiftClock);
+    const plan = activePlan().map((item) => {
+      const [startLabel, endLabel] = String(item.time || "").split(/[–-]/);
+      const task = taskForPlan(item);
+      const reason = featureState.pauseReasons[task?.id];
+      const start = timeValue(startLabel);
+      const end = timeValue(endLabel);
+      let tone = "next";
+      let status = "Następne";
+      if (task?.status === "Zakończone") { tone = "done"; status = "Zakończone"; }
+      else if (task?.status === "Wstrzymane" || now > end && task?.status !== "Zakończone") { tone = "delayed"; status = reason?.reason || "Opóźnione"; }
+      else if (task && now >= start && now <= end) { tone = "now"; status = "Trwa teraz"; }
+      else if (task) { tone = "active"; status = "W realizacji"; }
+      return { item, task, tone, status, start, reason };
+    });
+    const firstBreak = context.state.employees.find((employee) => employee.status === "Obecny" && employee.breaks?.length)?.breaks?.[0] || { start: "09:15", minutes: 20 };
+    const breakEntry = { break: true, start: timeValue(firstBreak.start), time: `${firstBreak.start} · ${firstBreak.minutes} min`, tone: now >= timeValue(firstBreak.start) && now <= timeValue(firstBreak.start) + Number(firstBreak.minutes) ? "now" : now < timeValue(firstBreak.start) ? "next" : "done" };
+    const entries = [...plan, breakEntry].sort((a, b) => a.start - b.start);
+    const delayed = plan.filter((entry) => entry.tone === "delayed").length;
+    return `<section class="v7-shift-timeline"><header><div><span class="kicker">OŚ BIEŻĄCEJ ZMIANY</span><h3>Teraz, następne i opóźnione</h3><p>Plan, aktywne prace i przerwy są ułożone w kolejności czasu.</p></div><span class="v7-clock"><small>CZAS MAKIETY</small><b>${featureState.shiftClock}</b><em>${delayed ? `${delayed} opóźnione` : "zgodnie z planem"}</em></span></header><div class="v7-timeline-track">${entries.map((entry) => entry.break ? `<article class="break ${entry.tone}"><i>Ⅱ</i><span><small>PRZERWA</small><b>Pierwsza przerwa</b><em>${entry.time} · pierwsze 15 min płatne</em></span></article>` : `<article class="${entry.tone}"><i>${entry.tone === "done" ? "✓" : entry.tone === "delayed" ? "!" : "●"}</i><span><small>${escapeHtml(entry.item.time)}</small><b>${escapeHtml(entry.item.title)}</b><em>${escapeHtml(entry.item.naveEnd && entry.item.naveEnd !== entry.item.nave ? `${entry.item.nave}–${entry.item.naveEnd}` : entry.item.nave)} · ${escapeHtml(entry.status)}</em>${entry.reason ? `<strong>Powód: ${escapeHtml(entry.reason.reason)}</strong>` : ""}</span>${entry.task ? `<button data-module-action="focus-plan-execution" data-task-id="${entry.task.id}" data-task-title="${escapeHtml(entry.task.title)}">Otwórz</button>` : context.state.role === "Brygadzista" ? `<button data-module-action="start-plan-item" data-plan-id="${entry.item.id}">Rozpocznij</button>` : ""}</article>`).join("")}</div></section>`;
+  }
+
+  function pauseReasonModal() {
+    const task = context.state.tasks.find((item) => item.id === Number(featureState.pauseTaskId));
+    if (!task) return "";
+    const reasons = ["Brak ludzi", "Awaria wózka", "Brak materiału", "Problem z uprawą", "Oczekiwanie na decyzję", "Przerwa", "Inna przyczyna"];
+    return `<div class="modal-backdrop v7-pause-modal"><section class="modal" role="dialog" aria-modal="true" aria-label="Powód wstrzymania pracy"><div class="modal-head"><div><span class="kicker">WSTRZYMANIE PRACY</span><h2>Podaj przyczynę przestoju</h2><p>${escapeHtml(task.title)} · ${escapeHtml(locationRangeLabel(task))}</p></div><button class="icon-btn" data-module-action="close-pause-reason" aria-label="Zamknij">×</button></div><form data-v7-form="pause-reason"><label class="field"><span>Przyczyna</span><select name="reason">${reasons.map((reason) => `<option>${reason}</option>`).join("")}</select></label><label class="field"><span>Co trzeba zrobić, aby wznowić?</span><textarea name="note" rows="3" required placeholder="np. technik sprawdza wózek WZ-03"></textarea></label><label class="field"><span>Odpowiedzialny za rozwiązanie</span><select name="owner"><option>${escapeHtml(task.foreman)}</option><option>Dział techniczny · kolejka</option><option>Ochrona roślin · kolejka</option><option>Kierownik produkcji</option></select></label><div class="hint"><b>i</b><span>Przyczyna pozostanie przy zadaniu i będzie uwzględniona przy ocenie wydajności.</span></div><div class="modal-actions"><button type="button" class="ghost" data-module-action="close-pause-reason">Anuluj</button><button class="primary">Wstrzymaj i zapisz powód</button></div></form></section></div>`;
+  }
+
+  function enhanceTaskCards() {
+    if (context.state.screen !== "tasks") return;
+    context.app.querySelectorAll("[data-task-card-id]").forEach((card) => {
+      const task = context.state.tasks.find((item) => item.id === Number(card.dataset.taskCardId));
+      if (!task) return;
+      const toggle = card.querySelector('[data-action="toggle-task"]');
+      if (toggle) {
+        toggle.removeAttribute("data-action");
+        toggle.dataset.moduleAction = task.status === "Wstrzymane" ? "resume-task" : "open-pause-reason";
+        toggle.dataset.taskId = task.id;
+        toggle.textContent = task.status === "Wstrzymane" ? "Wznów i zamknij przestój" : "Wstrzymaj z powodem";
+      }
+      const reason = featureState.pauseReasons[task.id];
+      if (reason && task.status === "Wstrzymane") card.querySelector(".task-result")?.insertAdjacentHTML("beforebegin", `<div class="v7-task-pause"><i>!</i><span><small>POWÓD PRZESTOJU</small><b>${escapeHtml(reason.reason)}</b><em>${escapeHtml(reason.note)} · odpowiada ${escapeHtml(reason.owner)}</em></span></div>`);
+    });
+  }
+
+  function downtimeContextPanel() {
+    const records = Object.entries(featureState.pauseReasons).map(([taskId, reason]) => ({ task: context.state.tasks.find((item) => item.id === Number(taskId)), ...reason })).filter((item) => item.task);
+    const grouped = records.reduce((result, item) => { result[item.reason] = (result[item.reason] || 0) + 1; return result; }, {});
+    return `<section class="v7-downtime-context"><header><div><span class="kicker">KONTEKST WYDAJNOŚCI</span><h3>Wynik nie jest oceniany bez przyczyny przestoju</h3><p>Raport rozdziela czas pracy od awarii, braku materiału, przerwy i oczekiwania na decyzję.</p></div><span><b>${records.length}</b><small>zapisanych przyczyn</small></span></header>${records.length ? `<div>${Object.entries(grouped).map(([reason, count]) => `<span><i>${count}</i><b>${escapeHtml(reason)}</b></span>`).join("")}</div>` : `<p class="v7-no-downtime">✓ Brak zarejestrowanych przestojów w bieżącym zakresie.</p>`}</section>`;
+  }
+
   function handoverPanel() {
     if (!["Brygadzista", "Kierownik"].includes(context.state.role)) return "";
     const saved = featureState.handover;
     const tasks = activeTasks();
     const tickets = openTickets();
     const carts = [...new Set(tasks.map((task) => task.cart).filter(Boolean))];
-    if (context.state.role === "Kierownik") return `<section class="v6-handover ${saved ? "saved" : "waiting"}"><header><div><span class="kicker">PRZEKAZANIE ZMIANY</span><h3>${saved ? `${escapeHtml(saved.site)} przekazała zmianę` : "Oczekiwanie na przekazanie brygadzisty"}</h3><p>${saved ? `${escapeHtml(saved.author)} → ${escapeHtml(saved.recipient)} · ${escapeHtml(saved.savedAt)}` : "Po zapisaniu kierownik zobaczy niezakończone prace, problemy, wózki i notatkę."}</p></div><span><b>${saved ? "✓" : "…"}</b><small>${saved ? "otrzymano" : "oczekuje"}</small></span></header>${saved ? `<div class="v6-handover-readout"><span><small>Prace do kontynuacji</small><b>${saved.tasks.length}</b></span><span><small>Otwarte problemy</small><b>${saved.tickets.length}</b></span><span><small>Wózki w użyciu</small><b>${saved.carts.length}</b></span><p><small>Notatka brygadzisty</small><b>${escapeHtml(saved.note)}</b></p></div>` : ""}</section>`;
+    const status = saved?.status || "Wysłane";
+    if (context.state.role === "Kierownik") return `<section class="v6-handover v7-handover-confirmation ${saved ? "saved" : "waiting"}"><header><div><span class="kicker">PRZEKAZANIE ZMIANY</span><h3>${saved ? `${escapeHtml(saved.site)} przekazała zmianę` : "Oczekiwanie na przekazanie brygadzisty"}</h3><p>${saved ? `${escapeHtml(saved.author)} → ${escapeHtml(saved.recipient)} · ${escapeHtml(saved.savedAt)}` : "Po zapisaniu kierownik zobaczy niezakończone prace, problemy, wózki i notatkę."}</p></div><span class="status-${status.toLowerCase().replace(/ł/g, "l").replace(/ę/g, "e")}"><b>${status === "Przyjęte" ? "✓" : status === "Odczytane" ? "◎" : saved ? "→" : "…"}</b><small>${escapeHtml(status)}</small></span></header>${saved ? `<div class="v6-handover-readout"><span><small>Prace do kontynuacji</small><b>${saved.tasks.length}</b></span><span><small>Otwarte problemy</small><b>${saved.tickets.length}</b></span><span><small>Wózki w użyciu</small><b>${saved.carts.length}</b></span><p><small>Notatka brygadzisty</small><b>${escapeHtml(saved.note)}</b></p></div><form class="v7-handover-accept" data-v7-form="accept-handover"><label><span>Komentarz osoby przejmującej</span><textarea name="comment" rows="2" required placeholder="Potwierdź, co zostanie przejęte na następnej zmianie">${escapeHtml(saved.acceptanceComment || "Przejmuję aktywne prace, wskazane wózki i otwarte problemy.")}</textarea></label><div><button type="button" class="secondary" data-module-action="mark-handover-read" ${status !== "Wysłane" ? "disabled" : ""}>${status === "Wysłane" ? "Oznacz jako odczytane" : "✓ Odczytano"}</button><button class="primary" ${status === "Przyjęte" ? "disabled" : ""}>${status === "Przyjęte" ? "✓ Zmiana przyjęta" : "Przyjmij zmianę"}</button></div>${saved.acceptedAt ? `<small>Przyjął: ${escapeHtml(saved.acceptedBy)} · ${escapeHtml(saved.acceptedAt)}</small>` : ""}</form>` : ""}</section>`;
     const foremen = context.siteResponsibility.find((item) => item.site === context.state.selectedSite)?.foremen || ["Tomasz Wójcik"];
-    return `<details class="v6-handover ${saved ? "saved" : "waiting"}" ${saved ? "" : "open"}><summary><div><span class="kicker">PRZEKAZANIE ZMIANY</span><h3>${saved ? "Przekazanie zapisane" : "Przygotuj następną zmianę"}</h3><p>${saved ? `${escapeHtml(saved.author)} → ${escapeHtml(saved.recipient)} · ${escapeHtml(saved.savedAt)}` : "System automatycznie zbiera aktywne prace, problemy i używane wózki."}</p></div><span><b>${saved ? "✓" : tasks.length + tickets.length}</b><small>${saved ? "zapisano" : "pozycji"}</small></span></summary><form data-v6-form="handover"><div class="v6-handover-auto"><span><small>Niezakończone prace</small><b>${tasks.length}</b><em>${tasks.map((task) => task.title).join(" · ") || "brak"}</em></span><span><small>Otwarte problemy</small><b>${tickets.length}</b><em>${tickets.filter((ticket) => ticket.priority === "Krytyczny").length} krytycznych</em></span><span><small>Wózki pozostające w pracy</small><b>${carts.length}</b><em>${carts.join(" · ") || "brak"}</em></span></div><div class="v6-handover-fields"><label><span>Następna zmiana</span><select name="nextShift"><option>Popołudniowa · 14:00–22:00</option><option>Nocna · 22:00–06:00</option><option>Poranna · 06:00–14:00</option></select></label><label><span>Przekaż do</span><select name="recipient">${foremen.map((name) => `<option>${escapeHtml(name)}</option>`).join("")}</select></label><label class="wide"><span>Najważniejsza informacja dla następnej zmiany</span><textarea name="note" rows="3" required placeholder="Co trzeba dokończyć, sprawdzić lub zabezpieczyć?">${escapeHtml(saved?.note || "Dokończyć aktywne prace i sprawdzić otwarte zgłoszenia przed rozpoczęciem kolejnego zakresu.")}</textarea></label></div><footer><small>Zapis obejmie dokładne miejsca, osoby odpowiedzialne i aktualny status.</small><div>${saved ? `<button type="button" class="secondary" data-module-action="download-handover">Pobierz przekazanie</button>` : ""}<button class="primary">${saved ? "Aktualizuj przekazanie" : "Zapisz przekazanie"}</button></div></footer></form></details>`;
+    return `<details class="v6-handover v7-handover-confirmation ${saved ? "saved" : "waiting"}" ${saved ? "" : "open"}><summary><div><span class="kicker">PRZEKAZANIE ZMIANY</span><h3>${saved ? `Przekazanie: ${escapeHtml(status)}` : "Przygotuj następną zmianę"}</h3><p>${saved ? `${escapeHtml(saved.author)} → ${escapeHtml(saved.recipient)} · ${escapeHtml(saved.savedAt)}${saved.acceptanceComment ? ` · komentarz: ${escapeHtml(saved.acceptanceComment)}` : ""}` : "System automatycznie zbiera aktywne prace, problemy i używane wózki."}</p></div><span><b>${status === "Przyjęte" ? "✓" : saved ? "→" : tasks.length + tickets.length}</b><small>${saved ? escapeHtml(status) : "pozycji"}</small></span></summary><form data-v6-form="handover"><div class="v6-handover-auto"><span><small>Niezakończone prace</small><b>${tasks.length}</b><em>${tasks.map((task) => task.title).join(" · ") || "brak"}</em></span><span><small>Otwarte problemy</small><b>${tickets.length}</b><em>${tickets.filter((ticket) => ticket.priority === "Krytyczny").length} krytycznych</em></span><span><small>Wózki pozostające w pracy</small><b>${carts.length}</b><em>${carts.join(" · ") || "brak"}</em></span></div><div class="v6-handover-fields"><label><span>Następna zmiana</span><select name="nextShift"><option>Popołudniowa · 14:00–22:00</option><option>Nocna · 22:00–06:00</option><option>Poranna · 06:00–14:00</option></select></label><label><span>Przekaż do</span><select name="recipient">${foremen.map((name) => `<option>${escapeHtml(name)}</option>`).join("")}</select></label><label class="wide"><span>Najważniejsza informacja dla następnej zmiany</span><textarea name="note" rows="3" required placeholder="Co trzeba dokończyć, sprawdzić lub zabezpieczyć?">${escapeHtml(saved?.note || "Dokończyć aktywne prace i sprawdzić otwarte zgłoszenia przed rozpoczęciem kolejnego zakresu.")}</textarea></label></div><footer><small>Zapis obejmie dokładne miejsca, osoby odpowiedzialne i automatycznie przeniesie niezakończone prace.</small><div>${saved ? `<button type="button" class="secondary" data-module-action="download-handover">Pobierz przekazanie</button>` : ""}<button class="primary">${saved ? "Wyślij zaktualizowane" : "Zapisz i wyślij"}</button></div></footer></form></details>`;
   }
 
   function designStudioPanel() {
@@ -581,6 +722,7 @@
       <div class="upgrade-metrics">${metric("Pozycje", plan.length, "dla wybranego obiektu")}${metric("Brakujące osoby", missing, missing ? "do przydzielenia" : "obsada kompletna", missing ? "amber" : "green")}${metric("Wysoki priorytet", high, "pozycji do omówienia", high ? "red" : "green")}${metric("Publikacja", published ? "Gotowa" : "Robocza", published ? "brygadziści widzą plan" : "wymaga publikacji", published ? "green" : "blue")}</div>
       <div class="publication-checklist"><span class="${plan.length ? "done" : ""}"><i>${plan.length ? "✓" : "1"}</i><b>Zadania</b><small>${plan.length ? `${plan.length} pozycji` : "brak pozycji"}</small></span><span class="${missing === 0 ? "done" : "warn"}"><i>${missing === 0 ? "✓" : "2"}</i><b>Obsada</b><small>${missing ? `brakuje ${missing} os.` : "kompletna"}</small></span><span class="${plan.every((item) => item.foreman && item.chief) ? "done" : ""}"><i>✓</i><b>Odpowiedzialność</b><small>główny + realizujący</small></span><span class="${published ? "done" : ""}"><i>${published ? "✓" : "4"}</i><b>Publikacja</b><small>${featureState.planValidated ? "sprawdzono teraz" : published ? "opublikowany" : "oczekuje"}</small></span></div>
       <div class="v5-plan-resources ${conflicts ? "attention" : "ready"}"><span><small>Dostępni teraz</small><b>${resources.availablePeople.length} osób · ${resources.freeCarts} wózków</b></span><span><small>Konflikty bieżących przydziałów</small><b>${conflicts || "brak"}</b></span><button class="secondary" data-nav="tasks">Sprawdź zasoby w Pracach →</button></div>
+      ${planVersionPanel()}
       ${planExecutionPanel()}
       ${featureState.planCopied ? `<div class="inline-confirmation">✓ Utworzono roboczą kopię planu na następny dzień. Można ją dalej redagować.</div>` : featureState.planAcknowledged ? `<div class="inline-confirmation">✓ Brygadzista potwierdził zapoznanie z bieżącą wersją planu.</div>` : ""}
     </section>`;
@@ -615,6 +757,7 @@
       <div class="upgrade-head"><div><span class="kicker">STEROWANIE REALIZACJĄ</span><h2>Prace, ludzie i postęp w jednym miejscu</h2><p>Filtruj kolejkę, aktualizuj postęp i reaguj na zadania wstrzymane.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="advance-tasks">+10% do aktywnych</button><button class="primary" data-module-action="open-first-task">Otwórz najpilniejszą</button></div></div>
       <div class="upgrade-metrics">${metric("W trakcie", running.length, "aktywnych prac")}${metric("Wstrzymane", paused.length, paused.length ? "wymagają decyzji" : "brak blokad", paused.length ? "red" : "green")}${metric("Zakończone", complete.length, "z pełnym wynikiem", "blue")}${metric("Zaangażowani", people, "unikalnych osób")}</div>
       <div class="filter-row"><span>Status prac</span>${segmented("tasks", ["Wszystkie", "W trakcie", "Wstrzymane", "Zakończone"], featureState.taskFilter)}</div>
+      ${shiftTimelinePanel()}
       <section class="v5-resource-board"><header><div><span class="kicker">ASYSTENT ZASOBÓW</span><h3>Ludzie i wózki bez podwójnych przydziałów</h3></div><span class="${conflictCount ? "attention" : "ready"}">${conflictCount ? `${conflictCount} konflikty` : "✓ Bez konfliktów"}</span></header><div class="v5-resource-metrics"><span><small>Wolni pracownicy</small><b>${resources.availablePeople.length}</b></span><span><small>Przypisani</small><b>${resources.peopleAssignments.size}</b></span><span><small>Wolne wózki</small><b>${resources.freeCarts}/12</b></span><span><small>Konflikty</small><b>${conflictCount}</b></span></div>${conflictCount ? `<div class="v5-conflict-list">${resources.peopleConflicts.map(([person, assignments]) => `<span><i>!</i><b>${escapeHtml(person)}</b><small>${assignments.map((task) => task.title).join(" · ")}</small></span>`).join("")}${resources.cartConflicts.map(([cart, assignments]) => `<span><i>!</i><b>${escapeHtml(cart)}</b><small>${assignments.map((task) => task.title).join(" · ")}</small></span>`).join("")}</div>` : `<p class="v5-resource-ok">Każda osoba i każdy wózek ma tylko jedno aktywne przypisanie.</p>`}<footer><button class="secondary" data-module-action="show-resource-conflicts" ${conflictCount ? "" : "disabled"}>Pokaż konflikty</button>${context.state.role !== "Kierownik" ? `<button class="primary" data-action="new-task">Przydziel pracę</button>` : `<span>Kierownik widzi konflikty; brygadzista zmienia obsadę.</span>`}</footer></section>
       ${bulkAssignmentPanel()}
     </section>`;
@@ -630,6 +773,7 @@
       <div class="upgrade-head"><div><span class="kicker">NORMY I TREND</span><h2>Porównuj tylko zgodne jednostki</h2><p>Kilogramy i rzędy są analizowane osobno, aby wynik był czytelny i uczciwy.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="check-productivity">Sprawdź wyniki poniżej normy</button><button class="primary" data-module-action="download-productivity">Eksportuj wyniki</button></div></div>
       <div class="upgrade-metrics">${metric("Średnio kg/h", kgRate, `${kg.length} zapisanych wyników`)}${metric("Średnio rz./h", rowRate, `${rows.length} zapisanych wyników`, "blue")}${metric("Powyżej normy", results.filter((entry) => entry.result / entry.hours >= (entry.unit === "kg" ? 120 : 1)).length, "indywidualnych wyników")}${metric("Do wsparcia", results.filter((entry) => entry.result / entry.hours < (entry.unit === "kg" ? 120 : .75)).length, "sprawdź przyczynę", "amber")}</div>
       <div class="filter-row"><span>Jednostka</span>${segmented("productivity", ["Wszystkie", "kg/h", "rz./h"], featureState.productivityUnit)}<small class="filter-result">Normy: zbiór 120 kg/h · prace rzędowe zależnie od rodzaju</small></div>
+      ${downtimeContextPanel()}
     </section>`;
   }
 
@@ -1008,13 +1152,15 @@
     const pageHead = context.app.querySelector(".content > .page-head");
     if (!pageHead) return;
     const guidance = context.state.screen === "dashboard" ? roleFocusPanel() : screenScopePanel();
-    const operationalDashboard = context.state.screen === "dashboard" ? `${workflowPanel()}${exceptionCenterPanel()}` : "";
+    const operationalDashboard = context.state.screen === "dashboard" ? `${workflowPanel()}${chiefForemanPanel()}${exceptionCenterPanel()}` : "";
     pageHead.insertAdjacentHTML("afterend", `${contextBar()}${guidance}${operationalDashboard}${designStudioPanel()}${modulePanel()}`);
+    context.app.insertAdjacentHTML("beforeend", pauseReasonModal());
     applyRolePermissions();
     renderFlexibleAttendance();
     simplifyDashboard();
     enhanceTaskAssignmentForm();
     enhanceLocationForms();
+    enhanceTaskCards();
     decorateReviewBlocks();
     renderLargeListControls();
     applyFilters();
@@ -1124,6 +1270,36 @@
       const missing = activePlan().reduce((sum, item) => sum + Math.max(0, item.need - item.assigned), 0);
       notify(missing ? `Plan sprawdzony: brakuje ${missing} os.` : "Plan sprawdzony: gotowy do publikacji");
     }
+    if (action === "compare-plan-version") {
+      const site = planSite();
+      featureState.planCompareSite = featureState.planCompareSite === site ? "" : site;
+      render();
+      return;
+    }
+    if (action === "rollback-plan-version") {
+      const site = planSite();
+      const versions = ensurePlanVersion(site);
+      if (versions.length < 2) return notify("Brak wcześniejszej wersji planu");
+      const previous = versions[versions.length - 2];
+      state.plan = [...state.plan.filter((item) => item.site !== site), ...cloneValue(previous.items)];
+      state.planPublication[site] = false;
+      featureState.planCompareSite = site;
+      notify(`Przywrócono zawartość wersji ${previous.number} jako plan roboczy`);
+      return;
+    }
+    if (action === "confirm-plan-version") {
+      const site = planSite();
+      const versions = ensurePlanVersion(site);
+      const version = versions[versions.length - 1].number;
+      const responsibility = context.siteResponsibility.find((item) => item.site === site);
+      const foreman = responsibility?.chief || "Brygadzista";
+      if (!featureState.planAcknowledgements[site] || featureState.planAcknowledgements[site].version !== version) featureState.planAcknowledgements[site] = { version, people: {} };
+      featureState.planAcknowledgements[site].people[foreman] = "teraz";
+      featureState.planAcknowledged = true;
+      saveFeaturePreferences();
+      notify(`Potwierdzono plan V${version}: ${foreman}`);
+      return;
+    }
     if (action === "copy-plan") {
       const nextDate = new Date(`${featureState.workDate}T12:00:00`);
       nextDate.setDate(nextDate.getDate() + 1);
@@ -1165,6 +1341,30 @@
         state.modal = "reassign-task";
         render();
       } else notify("Brak aktywnych prac");
+    }
+    if (action === "focus-foreman") {
+      featureState.pendingTaskFocus = button.dataset.foreman || "";
+      navigate("tasks");
+      return;
+    }
+    if (action === "open-pause-reason") {
+      featureState.pauseTaskId = Number(button.dataset.taskId);
+      render();
+      return;
+    }
+    if (action === "close-pause-reason") {
+      featureState.pauseTaskId = null;
+      render();
+      return;
+    }
+    if (action === "resume-task") {
+      const task = state.tasks.find((item) => item.id === Number(button.dataset.taskId));
+      if (!task) return;
+      task.status = "W trakcie";
+      if (featureState.pauseReasons[task.id]) Object.assign(featureState.pauseReasons[task.id], { resumedAt: "teraz", duration: "18 min", closed: true });
+      saveFeaturePreferences();
+      notify(`Wznowiono pracę: ${task.title}; przestój zapisano w historii`);
+      return;
     }
     if (action === "show-resource-conflicts") {
       const resources = resourceState();
@@ -1316,6 +1516,15 @@
       exportJson("przekazanie-zmiany-demo.json", featureState.handover);
       notify("Przygotowano przekazanie zmiany");
     }
+    if (action === "mark-handover-read") {
+      if (!featureState.handover) return;
+      featureState.handover.status = "Odczytane";
+      featureState.handover.readAt = "teraz";
+      featureState.handover.readBy = "Kierownik produkcji";
+      saveFeaturePreferences();
+      notify("Przekazanie oznaczono jako odczytane");
+      return;
+    }
     if (action === "export-design") {
       exportJson("projekt-zmian-makiety.json", { decyzje: designState.decisions, propozycje: designState.proposals });
       notify("Przygotowano eksport decyzji projektowych");
@@ -1363,6 +1572,37 @@
 
   function handleFeatureForm(form) {
     const data = new FormData(form);
+    if (form.dataset.v7Form === "pause-reason") {
+      const task = context.state.tasks.find((item) => item.id === featureState.pauseTaskId);
+      if (!task) return context.notify("Nie znaleziono pracy do wstrzymania");
+      task.status = "Wstrzymane";
+      task.updatedAt = "teraz";
+      featureState.pauseReasons[task.id] = {
+        reason: String(data.get("reason") || "Inna przyczyna"),
+        note: String(data.get("note") || "").trim(),
+        owner: String(data.get("owner") || task.foreman),
+        startedAt: "teraz",
+        startedBy: task.foreman,
+        closed: false,
+      };
+      featureState.pauseTaskId = null;
+      saveFeaturePreferences();
+      context.notify(`Wstrzymano pracę: ${task.title}; przyczyna trafiła do raportu`);
+      return;
+    }
+    if (form.dataset.v7Form === "accept-handover") {
+      if (!featureState.handover) return context.notify("Brak przekazania do przyjęcia");
+      Object.assign(featureState.handover, {
+        status: "Przyjęte",
+        acceptanceComment: String(data.get("comment") || "").trim(),
+        acceptedAt: `${featureState.workDate} · teraz`,
+        acceptedBy: "Kierownik produkcji",
+        carriedTasks: featureState.handover.tasks.map((task) => task.id),
+      });
+      saveFeaturePreferences();
+      context.notify(`Przyjęto zmianę i przeniesiono ${featureState.handover.carriedTasks.length} aktywnych prac`);
+      return;
+    }
     if (form.dataset.v6Form === "bulk-assignment") {
       const group = workGroups().find((item) => item.id === data.get("group"));
       const target = context.state.tasks.find((task) => task.id === Number(data.get("task")));
@@ -1393,6 +1633,8 @@
         recipient: data.get("recipient"),
         note: String(data.get("note") || "").trim(),
         savedAt: `${featureState.workDate} · teraz`,
+        status: "Wysłane",
+        carried: true,
         tasks: tasks.map((task) => ({ id: task.id, title: task.title, location: locationRangeLabel(task), foreman: task.foreman, people: [...task.people], cart: task.cart, status: task.status, progress: task.progress })),
         tickets: tickets.map((ticket) => ({ id: ticket.id, title: ticket.title, location: locationRangeLabel(ticket), owner: ticket.owner, priority: ticket.priority, status: ticket.status })),
         carts: [...new Set(tasks.map((task) => task.cart).filter(Boolean))],
@@ -1406,6 +1648,14 @@
     if (eventsBound) return;
     eventsBound = true;
     context.app.addEventListener("click", (event) => {
+      const publishPlan = event.target.closest('[data-action="publish-plan"]');
+      if (publishPlan) {
+        const site = context.state.selectedPlanSite;
+        const version = recordPlanVersion(site);
+        context.state.planPublication[site] = true;
+        context.notify(`Opublikowano plan ${site} · wersja ${version.number}`);
+        return;
+      }
       const employeePreset = event.target.closest("[data-v6-employee-preset]");
       if (employeePreset) {
         const form = employeePreset.closest('form[data-form="new-task"]');
@@ -1465,7 +1715,7 @@
       if (button && !button.disabled) handleAction(button);
     });
     context.app.addEventListener("submit", (event) => {
-      const featureForm = event.target.closest("[data-v6-form]");
+      const featureForm = event.target.closest("[data-v6-form], [data-v7-form]");
       if (featureForm) {
         event.preventDefault();
         handleFeatureForm(featureForm);

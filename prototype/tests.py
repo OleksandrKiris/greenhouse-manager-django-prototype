@@ -427,3 +427,35 @@ class PrototypePageTests(SimpleTestCase):
             ".v6-handover",
         ]:
             self.assertIn(marker, styles)
+
+    def test_chief_version_timeline_downtime_and_handover_confirmation_are_connected(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        app_script = (static_dir / "app.js").read_text(encoding="utf-8")
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        styles = (static_dir / "visual-system-v4.css").read_text(encoding="utf-8")
+        for marker in [
+            "function chiefForemanPanel()",
+            "function planVersionPanel()",
+            "recordPlanVersion",
+            "compare-plan-version",
+            "rollback-plan-version",
+            "confirm-plan-version",
+            "function shiftTimelinePanel()",
+            "function pauseReasonModal()",
+            'data-v7-form="pause-reason"',
+            "resume-task",
+            "function downtimeContextPanel()",
+            'data-v7-form="accept-handover"',
+            "mark-handover-read",
+        ]:
+            self.assertIn(marker, enhancements)
+        self.assertIn("data-task-card-id", app_script)
+        for marker in [
+            ".v7-chief-panel",
+            ".v7-plan-version",
+            ".v7-shift-timeline",
+            ".v7-task-pause",
+            ".v7-downtime-context",
+            ".v7-handover-accept",
+        ]:
+            self.assertIn(marker, styles)
