@@ -62,6 +62,20 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn("greenhouse-plan", styles)
         self.assertIn("observation-register", styles)
 
+    def test_ticket_center_tracks_workflow_sla_and_history(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        script = (static_dir / "app.js").read_text(encoding="utf-8")
+        styles = (static_dir / "styles.css").read_text(encoding="utf-8")
+        self.assertIn("ticket-workspace", script)
+        self.assertIn("ticket-source-flow", script)
+        self.assertIn("ticket-step", script)
+        self.assertIn("escalate-ticket", script)
+        self.assertIn('name="description"', script)
+        self.assertIn('name="impact"', script)
+        self.assertIn("timeline", script)
+        self.assertIn("ticket-timeline", styles)
+        self.assertIn("ticket-progress", styles)
+
     def test_mobile_navigation_is_part_of_the_prototype(self):
         static_dir = Path(__file__).parent / "static" / "prototype"
         script = (static_dir / "app.js").read_text(encoding="utf-8")
