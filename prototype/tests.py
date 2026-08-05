@@ -81,6 +81,25 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn("module-upgrade", styles)
         self.assertIn("@media (max-width: 900px)", styles)
 
+    def test_role_scope_permissions_and_personal_focus_are_explicit(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        script = (static_dir / "app.js").read_text(encoding="utf-8")
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        styles = (static_dir / "enhancements.css").read_text(encoding="utf-8")
+        self.assertIn("function roleTasks()", script)
+        self.assertIn("function roleTickets()", script)
+        self.assertIn("function roleObservations()", script)
+        self.assertIn("function roleNotifications()", script)
+        self.assertIn("roleTasks()", script)
+        self.assertIn("roleTickets()", script)
+        self.assertIn("const roleProfiles", enhancements)
+        self.assertIn("const screensByRole", enhancements)
+        self.assertIn("function applyRolePermissions()", enhancements)
+        self.assertIn("forbiddenActions", enhancements)
+        self.assertIn("Tylko do odczytu", enhancements)
+        self.assertIn("role-focus-panel", styles)
+        self.assertIn("read-only-note", styles)
+
     def test_work_completion_tracks_people_location_and_carts(self):
         script = (Path(__file__).parent / "static" / "prototype" / "app.js").read_text(encoding="utf-8")
         self.assertIn('name="people"', script)

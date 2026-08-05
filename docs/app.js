@@ -178,17 +178,20 @@
   function esc(value) { return String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char])); }
   function initials(name) { return name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase(); }
   function presentCount() { return state.employees.filter((employee) => employee.status === "Obecny").length; }
-  function completedTasks() { return state.tasks.filter((task) => task.status === "Zakończone"); }
-  function activeTickets() { return state.tickets.filter((ticket) => ticket.status !== "Zamknięte").length; }
-  function activeObservations() { return state.observations.filter((item) => item.status !== "Zamknięte"); }
+  function roleTasks() { return state.role === "Brygadzista" ? state.tasks.filter((task) => task.site === state.selectedSite) : state.tasks; }
+  function roleTickets() { return state.role === "Brygadzista" ? state.tickets.filter((ticket) => ticket.site === state.selectedSite) : state.tickets; }
+  function roleObservations() { return state.role === "Brygadzista" ? state.observations.filter((item) => item.site === state.selectedSite) : state.observations; }
+  function completedTasks() { return roleTasks().filter((task) => task.status === "Zakończone"); }
+  function activeTickets() { return roleTickets().filter((ticket) => ticket.status !== "Zamknięte").length; }
+  function activeObservations() { return roleObservations().filter((item) => item.status !== "Zamknięte"); }
   function rate(task) { return task.result && task.hours ? `${(task.result / task.hours).toFixed(task.unit === "kg" ? 0 : 2)} ${task.unit}/h` : "—"; }
   function locationLabel(item) { return [item.site,item.greenhouseSide,item.nave,item.entrance,item.passageSide].filter(Boolean).join(" · "); }
   function individualResults() {
-    return state.tasks.flatMap((task) => (task.contributions || []).map((entry) => ({ ...entry, title: task.title, row: task.row, cart: task.cart, unit: task.unit, site:task.site, greenhouseSide:task.greenhouseSide, nave:task.nave, entrance:task.entrance, passageSide:task.passageSide, foreman:task.foreman })));
+    return roleTasks().flatMap((task) => (task.contributions || []).map((entry) => ({ ...entry, title: task.title, row: task.row, cart: task.cart, unit: task.unit, site:task.site, greenhouseSide:task.greenhouseSide, nave:task.nave, entrance:task.entrance, passageSide:task.passageSide, foreman:task.foreman })));
   }
   function scopedPlan() { const site=state.role==="Kierownik"?state.selectedPlanSite:state.role==="Brygadzista"?state.selectedSite:null; const rolePlan=site?state.plan.filter((item)=>item.site===site):state.plan; return state.currentOnly?rolePlan.filter((item)=>item.current!==false):rolePlan; }
-  function scopedTasks() { const roleTasks=state.role === "Brygadzista" ? state.tasks.filter((item)=>item.site===state.selectedSite) : state.tasks; return state.currentOnly ? roleTasks.filter((item)=>item.status!=="Zakończone") : roleTasks; }
-  function visibleTickets() { return state.currentOnly ? state.tickets.filter((item)=>item.status!=="Zamknięte") : state.tickets; }
+  function scopedTasks() { const tasks=roleTasks(); return state.currentOnly ? tasks.filter((item)=>item.status!=="Zakończone") : tasks; }
+  function visibleTickets() { const tickets=roleTickets(); return state.currentOnly ? tickets.filter((item)=>item.status!=="Zamknięte") : tickets; }
   function visibleCropObservations() { return state.observations.filter((item)=>item.site===state.selectedCropSite && item.nave===state.selectedCropNave && (!state.currentOnly || item.status!=="Zamknięte")); }
   function selectedCropLocation() { return { site:state.selectedCropSite, greenhouseSide:state.selectedCropGreenhouseSide, nave:state.selectedCropNave, entrance:state.selectedCropEntrance, passageSide:state.selectedCropPassageSide }; }
   function focusCropObservation(item) { state.selectedCropSite=item.site; state.selectedCropNave=item.nave; state.selectedCropGreenhouseSide=item.greenhouseSide; state.selectedCropEntrance=item.entrance; state.selectedCropPassageSide=item.passageSide; state.selectedObservationId=item.id; }
@@ -196,10 +199,11 @@
   function ticketActor() { return state.role==="Dział techniczny"?"Piotr Zieliński":state.role==="Kierownik"?"Anna Kowalska · Kierownik":"Anna Kowalska · Brygadzista"; }
   function addTicketEvent(ticket,event,note) { ticket.timeline.push({time:"teraz",author:ticketActor(),event,note}); }
   function visibleNav() { return navItems.filter((item) => access[state.role].includes(item[0])); }
+  function roleNotifications() { return state.notifications.filter((item) => access[state.role].includes(item.screen)); }
   function blockers() {
     const result = [];
     if (state.employees.some((employee) => employee.status === "Nieustalony")) result.push("Ustal status wszystkich pracowników.");
-    if (state.tasks.some((task) => task.status === "Zakończone" && (!task.result || !task.hours || !task.contributions?.length))) result.push("Uzupełnij wynik, wykonawców, rząd i wózek zakończonych prac.");
+    if (roleTasks().some((task) => task.status === "Zakończone" && (!task.result || !task.hours || !task.contributions?.length))) result.push("Uzupełnij wynik, wykonawców, rząd i wózek zakończonych prac.");
     return result;
   }
   function notify(message) {
@@ -374,14 +378,14 @@
 
   function notificationsDrawer() {
     if (!state.notificationsOpen) return "";
-    const unread = state.notifications.filter((item)=>!item.read).length;
+    const unread = roleNotifications().filter((item)=>!item.read).length;
     return `<div class="drawer-backdrop"><aside class="drawer notification-drawer"><div class="modal-head"><div><span class="kicker">CENTRUM UWAGI</span><h2>Powiadomienia</h2></div><button class="icon-btn" data-action="close-notifications">×</button></div><div class="drawer-summary"><b>${unread} nowe</b><button class="mini-link" data-action="read-all">Oznacz wszystkie jako przeczytane</button></div><div class="notification-list">${state.notifications.map((item)=>`<article class="notification ${item.read?"read":""}"><i class="dot ${item.tone}"></i><div><b>${item.title}</b><small>${item.detail}</small></div><button class="ghost" data-action="open-notification" data-id="${item.id}">Otwórz</button></article>`).join("")}</div><div class="logic-note"><b>Docelowo</b><span>Powiadomienia powstają z terminów, niskich stanów, braków obsady, przekroczonego SLA i decyzji oczekujących na akceptację.</span></div></aside></div>`;
   }
 
   function renderApp() {
     const nav = visibleNav(); const index = nav.findIndex((item) => item[0] === state.screen);
     const screens = { dashboard, planning, attendance, tasks, productivity, team, crop, tickets, materials, reports };
-    const unread = state.notifications.filter((item)=>!item.read).length;
+    const unread = roleNotifications().filter((item)=>!item.read).length;
     const mobileTabs = ["dashboard","planning","tasks","reports"].filter((screen)=>access[state.role].includes(screen)).map((screen)=>navItems.find((item)=>item[0]===screen));
     return `<div class="shell ${state.mobileNavOpen?"mobile-menu-open":""} ${state.review?"reviewing":""}"><aside class="sidebar"><div class="sidebar-title"><div class="brand"><span>CITR</span><i>O</i><span>NEX</span></div><button class="mobile-menu-button" data-action="toggle-mobile-nav" aria-expanded="${state.mobileNavOpen}" aria-label="${state.mobileNavOpen?"Zamknij menu":"Otwórz menu"}"><i>${state.mobileNavOpen?"×":"☰"}</i><span>Menu</span></button></div><small class="brand-sub">GREENHOUSE MANAGER · DJANGO</small><nav class="nav" aria-label="Nawigacja główna">${nav.map((item)=>`<button class="${state.screen===item[0]?"active":""}" data-nav="${item[0]}"><i>${item[3]}</i>${item[1]}</button>`).join("")}</nav><div class="role-switch"><span class="kicker light">PODGLĄD ROLI</span><select data-change="role" aria-label="Zmień rolę">${roles.map((role)=>`<option ${state.role===role?"selected":""}>${role}</option>`).join("")}</select></div><button class="user" data-action="logout"><i class="avatar">AK</i><span><b>Anna Kowalska</b><small>${state.role}</small></span><span>↩</span></button></aside>
       <div class="workspace"><header class="topbar"><div class="shift-info"><span>BIEŻĄCA ZMIANA</span><b>05.08.2026 · ${state.role==="Brygadzista"?state.selectedSite:"wszystkie obiekty"}</b></div><div class="top-actions"><button class="current-view-toggle ${state.currentOnly?"active":""}" data-action="toggle-current">${state.currentOnly?"● Aktualne":"◷ Wszystkie"}</button><button class="notification-button" data-action="open-notifications" aria-label="Powiadomienia">●<span>Powiadomienia</span>${unread?`<b>${unread}</b>`:""}</button><button class="review-toggle" data-action="toggle-review">● Tryb oceny makiety</button><span class="state-pill ${state.shiftClosed?"closed":""}">${state.shiftClosed?"ZAMKNIĘTA":"W TRAKCIE"}</span></div></header><main class="content">${screens[state.screen]()}</main><div class="journey"><button data-nav="${nav[Math.max(0,index-1)][0]}" ${index<=0?"disabled":""}>← Poprzedni</button><div class="steps">${nav.map((item,i)=>`<button class="${i<index?"done":""} ${i===index?"active":""}" data-nav="${item[0]}"><i>${i+1}</i><small>${item[2]}</small></button>`).join("")}</div><button data-nav="${nav[Math.min(nav.length-1,index+1)][0]}" ${index>=nav.length-1?"disabled":""}>Następny →</button></div></div>
@@ -448,13 +452,13 @@
     else if (action === "approve-item") { state.approvedItems.push(button.dataset.id); notify("Decyzja zatwierdzona i zapisana w historii"); }
     else if (action === "open-notifications") { state.notificationsOpen=true; render(); }
     else if (action === "close-notifications") { state.notificationsOpen=false; render(); }
-    else if (action === "read-all") { state.notifications.forEach((item)=>{item.read=true;}); render(); }
+    else if (action === "read-all") { roleNotifications().forEach((item)=>{item.read=true;}); render(); }
     else if (action === "open-notification") { const item=state.notifications.find((notification)=>notification.id===Number(button.dataset.id)); item.read=true; state.notificationsOpen=false; navigate(item.screen); }
     else if (action === "feedback-fit" || action === "feedback-change") { const note = document.getElementById("review-note")?.value.trim() || ""; state.feedback[`${state.role}:${state.screen}`] = { value: action === "feedback-fit" ? "fit" : "change", note }; saveFeedbackState(); notify(action === "feedback-fit" ? "Zapisano: ekran pasuje" : "Zapisano: ekran do zmiany"); }
     else if (action === "open-feedback") { state.feedbackOpen = true; render(); }
     else if (action === "close-feedback") { state.feedbackOpen = false; render(); }
     else if (action === "export-feedback") exportJson("uwagi-do-makiety.json", Object.entries(state.feedback).map(([key,value])=>({ ekran_i_rola:key, ocena:value.value==="fit"?"Pasuje":"Do zmiany", komentarz:value.note })));
-    else if (action === "export-report") exportJson("raport-zmiany-demo.json", { obecni: presentCount(), godziny: presentCount()*7.75, prace: state.tasks, zgloszenia: state.tickets, zamknieta: state.shiftClosed });
+    else if (action === "export-report") exportJson("raport-zmiany-demo.json", { rola:state.role, zakres:state.role==="Brygadzista"?state.selectedSite:"zgodny z rolą", obecni:presentCount(), godziny:presentCount()*7.75, prace:roleTasks(), zgloszenia:roleTickets(), zamknieta:state.shiftClosed });
   });
 
   app.addEventListener("change", (event) => {
