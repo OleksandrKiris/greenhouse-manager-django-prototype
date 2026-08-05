@@ -165,6 +165,7 @@ class PrototypePageTests(SimpleTestCase):
         styles = (static_dir / "styles.css").read_text(encoding="utf-8")
         self.assertIn("mobile-bottom-nav", script)
         self.assertIn("toggle-mobile-nav", script)
+        self.assertNotIn('class="journey"', script)
         self.assertIn("@media(max-width:900px)", styles)
 
     def test_flexible_work_time_and_design_review_tools_are_modelled(self):
