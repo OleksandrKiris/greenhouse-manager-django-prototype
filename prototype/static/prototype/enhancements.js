@@ -182,6 +182,57 @@
     </section>`;
   }
 
+  function workflowPanel() {
+    const { state } = context;
+    const unsettled = state.employees.filter((employee) => employee.status === "Nieustalony").length;
+    const openWork = activeTasks().length;
+    const criticalTickets = openTickets().filter((ticket) => ticket.priority === "Krytyczny").length;
+    const highCrop = openObservations().filter((item) => item.severity === "high").length;
+    const missing = activePlan().reduce((sum, item) => sum + Math.max(0, item.need - item.assigned), 0);
+    const planPublished = state.role === "Kierownik"
+      ? Boolean(state.planPublication[state.selectedPlanSite])
+      : state.role === "Brygadzista"
+        ? Boolean(state.planPublication[state.selectedSite])
+        : true;
+    const flows = {
+      Brygadzista: [
+        { screen: "planning", screens: ["planning"], label: "Plan", detail: missing ? `Brakuje ${missing} os.` : "Plan gotowy", done: planPublished && missing === 0 },
+        { screen: "attendance", screens: ["attendance"], label: "Obecność", detail: unsettled ? `${unsettled} do decyzji` : "Statusy kompletne", done: unsettled === 0 },
+        { screen: "tasks", screens: ["tasks", "productivity", "team", "crop", "tickets", "materials"], label: "Realizacja", detail: openWork ? `${openWork} aktywne prace` : "Prace zakończone", done: openWork === 0 },
+        { screen: "reports", screens: ["reports"], label: "Raport", detail: state.shiftClosed ? "Zmiana zamknięta" : "Do zamknięcia", done: state.shiftClosed },
+      ],
+      Kierownik: [
+        { screen: "planning", screens: ["planning"], label: "Plan", detail: missing ? `Brakuje ${missing} os.` : "Obsada gotowa", done: planPublished && missing === 0 },
+        { screen: "attendance", screens: ["attendance", "tasks", "team"], label: "Organizacja", detail: unsettled ? `${unsettled} nieustalone` : "Ludzie potwierdzeni", done: unsettled === 0 },
+        { screen: "tickets", screens: ["crop", "tickets", "materials"], label: "Ryzyka", detail: criticalTickets ? `${criticalTickets} krytyczne` : "Bez krytycznych", done: criticalTickets === 0 },
+        { screen: "reports", screens: ["productivity", "reports"], label: "Raport", detail: state.shiftClosed ? "Zmiana zamknięta" : "Oczekuje", done: state.shiftClosed },
+      ],
+      "Ochrona roślin": [
+        { screen: "planning", screens: ["planning"], label: "Kontekst", detail: "Plan do wglądu", done: true },
+        { screen: "crop", screens: ["crop"], label: "Obserwacje", detail: highCrop ? `${highCrop} alarmy` : "Brak alarmów", done: highCrop === 0 },
+        { screen: "materials", screens: ["materials"], label: "Działania", detail: "Materiały i zabiegi", done: featureState.protectionTaskCreated },
+        { screen: "reports", screens: ["reports"], label: "Przekazanie", detail: "Raport kierownika", done: featureState.reportApproved },
+      ],
+      "Dział techniczny": [
+        { screen: "planning", screens: ["planning"], label: "Kontekst", detail: "Plan do wglądu", done: true },
+        { screen: "tickets", screens: ["tickets"], label: "Zgłoszenia", detail: criticalTickets ? `${criticalTickets} krytyczne` : "SLA pod kontrolą", done: criticalTickets === 0 },
+        { screen: "materials", screens: ["materials"], label: "Realizacja", detail: `${openTickets().length} aktywnych`, done: openTickets().length === 0 },
+        { screen: "reports", screens: ["reports"], label: "Przekazanie", detail: "Historia napraw", done: featureState.reportApproved },
+      ],
+      Kadry: [
+        { screen: "attendance", screens: ["attendance"], label: "Czas pracy", detail: unsettled ? `${unsettled} do decyzji` : "Kompletne dane", done: unsettled === 0 },
+        { screen: "team", screens: ["team"], label: "Pracownicy", detail: "Dokumenty i bilans", done: false },
+        { screen: "reports", screens: ["reports"], label: "Rozliczenie", detail: featureState.reportApproved ? "Zatwierdzone" : "Do zatwierdzenia", done: featureState.reportApproved },
+      ],
+    };
+    const steps = flows[state.role];
+    const activeIndex = Math.max(0, steps.findIndex((step) => step.screens.includes(state.screen)));
+    return `<section class="workflow-panel" aria-label="Przebieg pracy dla roli ${escapeHtml(state.role)}">
+      <header><span><small>TWÓJ PROCES · ${escapeHtml(state.role)}</small><b>Wiesz, co jest teraz i co będzie dalej</b></span><em>Etap ${activeIndex + 1} z ${steps.length}</em></header>
+      <div>${steps.map((step, index) => { const active = step.screens.includes(state.screen); const attention = !step.done && ((step.label === "Plan" && missing) || step.label === "Obecność" && unsettled || step.label === "Czas pracy" && unsettled || step.label === "Ryzyka" && criticalTickets || step.label === "Obserwacje" && highCrop || step.label === "Zgłoszenia" && criticalTickets); return `<button class="${active ? "active" : ""} ${step.done ? "done" : ""} ${attention ? "attention" : ""}" data-nav="${step.screen}" ${active ? 'aria-current="step"' : ""}><i>${step.done ? "✓" : attention ? "!" : index + 1}</i><span><b>${step.label}</b><small>${step.detail}</small></span><em>→</em></button>`; }).join("")}</div>
+    </section>`;
+  }
+
   function designStudioPanel() {
     if (!context.state.review) return "";
     const prefix = `${context.state.role}:${context.state.screen}:`;
@@ -503,7 +554,8 @@
     ensureTimeProfiles();
     const pageHead = context.app.querySelector(".content > .page-head");
     if (!pageHead) return;
-    pageHead.insertAdjacentHTML("afterend", `${contextBar()}${roleFocusPanel()}${designStudioPanel()}${modulePanel()}`);
+    const guidance = context.state.screen === "dashboard" ? roleFocusPanel() : workflowPanel();
+    pageHead.insertAdjacentHTML("afterend", `${contextBar()}${guidance}${designStudioPanel()}${modulePanel()}`);
     applyRolePermissions();
     renderFlexibleAttendance();
     decorateReviewBlocks();

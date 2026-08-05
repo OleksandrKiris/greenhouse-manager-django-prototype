@@ -187,3 +187,15 @@ class PrototypePageTests(SimpleTestCase):
             self.assertIn(marker, enhancements)
         for class_name in ["time-worker-card", "design-studio", "design-block-toolbar"]:
             self.assertIn(class_name, styles)
+
+    def test_role_workflow_and_priority_ordering_are_explicit(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        script = (static_dir / "app.js").read_text(encoding="utf-8")
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        styles = (static_dir / "enhancements.css").read_text(encoding="utf-8")
+        self.assertIn("review: false", script)
+        self.assertIn("const taskOrder", script)
+        self.assertIn("const ticketPriority", script)
+        self.assertIn("function workflowPanel()", enhancements)
+        self.assertIn("TWÓJ PROCES", enhancements)
+        self.assertIn("workflow-panel", styles)

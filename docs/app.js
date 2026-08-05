@@ -155,7 +155,7 @@
     selectedMaterial: null,
     selectedTicketId: 3,
     ticketFilter: "all",
-    review: !window.matchMedia("(max-width: 900px)").matches,
+    review: false,
     feedbackOpen: false,
     notificationsOpen: false,
     mobileNavOpen: false,
@@ -274,7 +274,7 @@
   }
 
   function planning() {
-    const items=scopedPlan(); const manager=state.role==="Kierownik";
+    const items=[...scopedPlan()].sort((a,b)=>Number(b.priority==="Wysoki")-Number(a.priority==="Wysoki")||Math.max(0,b.need-b.assigned)-Math.max(0,a.need-a.assigned)||a.time.localeCompare(b.time)); const manager=state.role==="Kierownik";
     const planSite=manager?state.selectedPlanSite:state.role==="Brygadzista"?state.selectedSite:"Wszystkie obiekty";
     const published=manager?state.planPublication[state.selectedPlanSite]:state.planPublication[state.selectedSite];
     const missing = items.reduce((sum, item) => sum + Math.max(0, item.need - item.assigned), 0);
@@ -313,7 +313,7 @@
   }
 
   function tasks() {
-    const visible=scopedTasks(); const manager=state.role==="Kierownik";
+    const taskOrder={"Wstrzymane":0,"W trakcie":1,"Zakończone":2}; const visible=[...scopedTasks()].sort((a,b)=>(taskOrder[a.status]??9)-(taskOrder[b.status]??9)||Number(b.progress||0)-Number(a.progress||0)); const manager=state.role==="Kierownik";
     return `${pageHead("PLAN I WYKONANIE", manager?"Kontrola realizacji":"Moje aktualne prace", manager?"Kierownik kontroluje wykonanie planu; zadania i ludzi obsługują odpowiedzialni brygadziści.":"Każde zadanie łączy ludzi z dokładnym miejscem i wózkiem.", manager?`<button class="secondary" data-nav="planning">Wróć do planu</button>`:`<button class="primary" data-action="new-task">+ Dodaj zadanie z planu</button>`)}
       <section class="compact surface"><div><span>Zakres</span><b>${manager?"Cały zakład":state.selectedSite}</b></div><div><span>Widoczne zadania</span><b>${visible.length}</b></div><div><span>Widok</span><b>${state.currentOnly?"Aktualne":"Wszystkie"}</b></div><div><span>Rola</span><b>${manager?"Kontrola":"Realizacja"}</b></div></section>
       <section class="task-grid">${visible.map((task) => `<article class="task surface"><div class="task-top"><span class="chip ${task.status === "Zakończone" ? "done" : task.status === "Wstrzymane" ? "paused" : ""}">${task.status}</span><small>${task.site}</small></div><h3>${task.title}</h3><p class="location-path">${locationLabel(task)}</p><div class="task-location"><span><small>BRYGADZISTA</small><b>${task.foreman}</b></span><span><small>WÓZEK</small><b>${task.cart || "—"}</b></span></div><div class="people">${task.people.map((person) => `<i class="avatar" title="${person}">${initials(person)}</i>`).join("")}<small>${task.people.length} os.</small>${task.status !== "Zakończone"&&!manager ? `<button class="mini-link" data-action="reassign-task" data-id="${task.id}">Zmień obsadę</button>` : ""}</div><p class="assigned-names"><b>${task.status === "Zakończone" ? "Wykonali:" : "Pracują:"}</b> ${task.people.join(", ")}</p><div class="task-result"><div><span>Realizacja</span><b>${task.status === "Zakończone" ? rate(task) : `${task.progress}%`}</b></div><div class="bar"><i style="width:${task.progress}%"></i></div></div>${task.status !== "Zakończone"&&!manager ? `<div class="task-actions"><button class="ghost" data-action="toggle-task" data-id="${task.id}">${task.status === "Wstrzymane" ? "Wznów" : "Wstrzymaj"}</button><button class="primary" data-action="finish-task" data-id="${task.id}">Zakończ i oznacz osoby</button></div>` : task.status === "Zakończone"?`<div class="saved">✓ ${task.contributions.length} os. potwierdzone · ${rate(task)}</div>`:`<div class="saved">Nadzór: ${task.foreman}</div>`}</article>`).join("") || `<div class="empty surface"><b>Brak aktualnych prac</b><p>Włącz „Wszystkie”, aby zobaczyć historię.</p></div>`}</section>`;
@@ -348,7 +348,7 @@
   }
 
   function tickets() {
-    const base=visibleTickets();
+    const ticketPriority={"Krytyczny":0,"Wysoki":1,"Średni":2}; const ticketStatus={"Nowe":0,"Przyjęte":1,"W realizacji":2,"Zamknięte":3}; const base=[...visibleTickets()].sort((a,b)=>(ticketPriority[a.priority]??9)-(ticketPriority[b.priority]??9)||(ticketStatus[a.status]??9)-(ticketStatus[b.status]??9));
     const filters=[{id:"all",label:"Wszystkie",count:base.length},{id:"new",label:"Nowe",count:base.filter((item)=>item.status==="Nowe").length},{id:"critical",label:"Krytyczne",count:base.filter((item)=>item.priority==="Krytyczny").length},{id:"assigned",label:"Przypisane",count:base.filter((item)=>!item.owner.includes("kolejka")).length}];
     const tickets=base.filter((item)=>state.ticketFilter==="all"||state.ticketFilter==="new"&&item.status==="Nowe"||state.ticketFilter==="critical"&&item.priority==="Krytyczny"||state.ticketFilter==="assigned"&&!item.owner.includes("kolejka"));
     const selected=tickets.find((item)=>item.id===state.selectedTicketId)||tickets[0];
