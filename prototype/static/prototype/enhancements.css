@@ -694,3 +694,211 @@ textarea { font-size: 12px; }
   .design-review-block.time-roster-shell .time-roster-head { padding-top: 18px; }
   .design-review-block.module-upgrade { padding-top: 14px; }
 }
+
+/* System wizualny inspirowany CITRONEX Hydra: spokojny, prosty i mobilny */
+:root {
+  --red: #c43b32;
+  --red2: #8f2924;
+  --green: #19713f;
+  --green2: #19713f;
+  --mint: #eef8f1;
+  --cream: #f3f6f4;
+  --ink: #16211b;
+  --muted: #5c6b62;
+  --line: #dbe5de;
+  --amber: #a86b08;
+  --blue: #2f6fca;
+  --shadow: 0 8px 20px rgba(22, 33, 27, .08);
+}
+
+body {
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 0 0, rgba(196, 59, 50, .06), transparent 22rem),
+    linear-gradient(180deg, #fff 0, var(--cream) 32rem);
+}
+
+.surface,
+.module-upgrade,
+.workflow-panel,
+.operations-context,
+.hydra-start-panel { border-color: var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+
+.primary { background: var(--red); border-color: var(--red); box-shadow: none; }
+.primary:hover { background: var(--red2); box-shadow: none; transform: none; }
+.secondary,
+.ghost { color: var(--ink); background: #fff; border-color: var(--line); box-shadow: none; }
+.secondary:hover,
+.ghost:hover { color: var(--red2); background: #fff8f7; border-color: #dfb9b5; box-shadow: none; transform: none; }
+
+.sidebar {
+  color: var(--ink);
+  background: rgba(255, 255, 255, .98);
+  border-right: 1px solid var(--line);
+  box-shadow: 8px 0 24px rgba(22, 33, 27, .055);
+}
+.sidebar .brand { color: var(--ink); }
+.sidebar .brand-logo { filter: none; }
+.sidebar .brand-product b { color: var(--ink); }
+.sidebar .brand-product small,
+.brand-sub { color: #7a877f; }
+.nav button { position: relative; color: #45544b; border: 1px solid transparent; }
+.nav button i { color: #596a60; background: #f2f5f3; }
+.nav button:hover { color: var(--red2); background: #fff7f6; border-color: #eedad7; transform: none; }
+.nav button.active { color: var(--red2); background: #fff3f1; border-color: #eed0cc; box-shadow: none; }
+.nav button.active::before { content: ""; position: absolute; inset: 8px auto 8px -1px; width: 4px; background: var(--red); border-radius: 0 6px 6px 0; }
+.nav button.active i { color: #fff; background: var(--red); }
+.role-switch { border-top-color: var(--line); }
+.role-switch .kicker.light { color: var(--red); }
+.role-switch select { color: var(--ink); background: #f7f9f8; border-color: var(--line); }
+.user { color: var(--ink); background: #f7f9f8; border: 1px solid var(--line); }
+.user small { color: var(--muted); }
+
+.topbar { background: rgba(255, 255, 255, .96); border-bottom-color: var(--line); box-shadow: 0 5px 16px rgba(22, 33, 27, .055); }
+.current-view-toggle.active { color: var(--green); background: var(--mint); border-color: #cde4d5; }
+.notification-button,
+.review-toggle { color: #4b5c52; background: #f7f9f8; border-color: var(--line); border-radius: 12px; }
+.state-pill { color: var(--green); background: var(--mint); }
+
+.login { color: var(--ink); background: var(--cream); }
+.login-visual {
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 8% 15%, rgba(196, 59, 50, .08), transparent 18rem),
+    radial-gradient(circle at 86% 82%, rgba(168, 107, 8, .08), transparent 20rem),
+    #f7f9f8;
+  border-right: 1px solid var(--line);
+}
+.login-visual::before { opacity: .32; background: linear-gradient(rgba(25, 113, 63, .045) 1px, transparent 1px), linear-gradient(90deg, rgba(25, 113, 63, .045) 1px, transparent 1px); background-size: 48px 48px; }
+.login-visual::after { width: 6px; background: var(--red); }
+.login-copy .kicker { color: var(--red); }
+.login-copy h1 { color: var(--red); }
+.login-copy p { color: var(--muted); }
+.login-flow { color: #7c8881; border-top-color: var(--line); }
+.login-flow b { color: var(--red2); }
+.login-form-side { background: #fff; }
+.login-card { background: #fff; border-color: var(--line); border-radius: 20px; box-shadow: 0 18px 48px rgba(22, 33, 27, .09); }
+.app-mark { background: var(--red); border-color: var(--red); box-shadow: none; }
+.role-card { border-radius: 14px; box-shadow: none; }
+.role-card:hover { border-color: #d7aaa6; box-shadow: none; transform: none; }
+.role-card.selected { background: #fff3f1; border-color: var(--red); box-shadow: 0 0 0 3px rgba(196, 59, 50, .09); }
+
+.role-focus-panel {
+  color: var(--ink);
+  background: #fff;
+  border-color: var(--line);
+  box-shadow: var(--shadow);
+}
+.role-focus-title > i { background: var(--red); }
+.role-focus-title small { color: var(--red); }
+.role-focus-title b { color: var(--ink); }
+.role-focus-title p { color: var(--muted); }
+.role-rights span { color: var(--green); background: var(--mint); border-color: #d3eadb; }
+.role-restriction { background: #fff8e8; border-color: #ead9b7; }
+.role-restriction > i { color: #fff; background: var(--amber); }
+.role-restriction small { color: #8b5e16; }
+.role-restriction b { color: #5e4a27; }
+
+.module-upgrade {
+  overflow: visible;
+  background: #fff;
+  border-left: 5px solid var(--green);
+  box-shadow: var(--shadow);
+}
+.module-upgrade::before { display: none; }
+.planning-upgrade,
+.tasks-upgrade { border-left-color: var(--green); }
+.attendance-upgrade,
+.team-upgrade,
+.productivity-upgrade { border-left-color: var(--blue); }
+.crop-upgrade,
+.materials-upgrade { border-left-color: var(--amber); }
+.tickets-upgrade { border-left-color: var(--red); }
+.reports-upgrade { border-left-color: #765aa6; }
+.upgrade-metric { background: #f8faf9; border-color: var(--line); }
+.upgrade-metric::after { display: none; }
+.filter-row,
+.decision-lane,
+.sla-lane { background: #f7f9f8; border-color: var(--line); }
+
+.workflow-panel button.active { color: var(--red2); background: #fff3f1; border-color: #e7c4c0; box-shadow: none; }
+.workflow-panel button.active b { color: var(--red2); }
+.workflow-panel button.active small { color: #7b5b58; }
+.workflow-panel button.active > i { background: var(--red); }
+.workflow-panel button.active > em { color: var(--red); }
+
+.hydra-start-panel { margin-bottom: 17px; overflow: hidden; background: #fff; }
+.hydra-start-panel > header { padding: 20px 22px 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--line); }
+.hydra-start-panel > header h2 { margin: 6px 0 4px; color: var(--red); font-size: 25px; letter-spacing: -.035em; }
+.hydra-start-panel > header p { max-width: 760px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.hydra-live { flex: 0 0 auto; padding: 7px 10px; color: var(--green); background: var(--mint); border-radius: 99px; font-size: 9px; font-weight: 850; }
+.hydra-live i { display: inline-block; width: 7px; height: 7px; margin-right: 4px; background: #38a66a; border-radius: 50%; }
+.hydra-action-grid { padding: 14px; display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 10px; background: #f7f9f8; }
+.hydra-action-card { min-width: 0; min-height: 218px; padding: 18px; display: grid; grid-template-columns: 42px 1fr; gap: 13px; background: #fff; border: 1px solid var(--line); border-left: 5px solid #86948c; border-radius: 14px; box-shadow: 0 8px 20px rgba(22, 33, 27, .06); }
+.hydra-action-card.priority { background: #fff3f1; border-left-color: var(--red); }
+.hydra-action-card.green { background: #eef8f1; border-left-color: var(--green); }
+.hydra-action-card.gold { background: #fff8e8; border-left-color: var(--amber); }
+.hydra-card-number { display: grid; place-items: center; width: 42px; height: 42px; color: #fff; background: #78857e; border-radius: 12px; font-size: 11px; font-style: normal; font-weight: 950; }
+.hydra-action-card.priority .hydra-card-number { background: var(--red); }
+.hydra-action-card.green .hydra-card-number { background: var(--green); }
+.hydra-action-card.gold .hydra-card-number { background: var(--amber); }
+.hydra-action-card > div { min-width: 0; display: flex; align-items: flex-start; flex-direction: column; }
+.hydra-action-card > div > span { color: #728078; font-size: 8px; font-weight: 950; letter-spacing: .09em; }
+.hydra-action-card h3 { margin: 8px 0 5px; font-size: 17px; line-height: 1.18; }
+.hydra-action-card p { margin: 0 0 15px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.hydra-action-card button { margin-top: auto; }
+.hydra-action-card button b { font-size: 14px; }
+.hydra-start-panel > footer { padding: 11px 15px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; background: #fff; border-top: 1px solid var(--line); }
+.hydra-start-panel > footer > span { padding: 8px 10px; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 7px; background: #f7f9f8; border-radius: 9px; }
+.hydra-start-panel > footer b { color: var(--green); font-size: 16px; }
+.hydra-start-panel > footer small { color: var(--muted); font-size: 9px; }
+.hydra-start-panel > footer .danger { background: #fff3f1; }
+.hydra-start-panel > footer .danger b { color: var(--red); }
+.hydra-start-panel > footer .warn { background: #fff8e8; }
+.hydra-start-panel > footer .warn b { color: var(--amber); }
+
+.time-roster-shell { box-shadow: var(--shadow); }
+.time-roster-head { color: var(--ink); background: #fff; border-bottom: 1px solid var(--line); }
+.time-roster-head h3 { color: var(--ink); }
+.time-roster-head p { color: var(--muted); }
+.time-roster-head .kicker { color: var(--red); }
+.time-legend span { color: var(--muted); }
+.time-roster { background: #f7f9f8; }
+.time-worker-card { box-shadow: 0 7px 18px rgba(22, 33, 27, .055); }
+.logic-note { color: #31523e; background: var(--mint); border: 1px solid #d1e7d8; }
+.logic-note b { color: var(--green); }
+.facility.support { color: var(--ink); background: #fff8e8; border: 1px solid #ead9b7; border-left: 5px solid var(--amber); }
+.facility.support p { border-color: #eadfc7; }
+.plan-site-selector button.active { color: var(--red2); background: #fff3f1; border-color: #e7c4c0; box-shadow: none; }
+.plan-time-badge { background: var(--green); }
+.mobile-bottom-nav button.active { color: var(--red2); background: #fff3f1; box-shadow: inset 0 0 0 1px #ebcfcc; }
+
+@media (max-width: 1080px) {
+  .hydra-action-grid { grid-template-columns: 1fr 1fr; }
+  .hydra-action-card.priority { grid-column: 1 / -1; min-height: 180px; }
+}
+
+@media (max-width: 900px) {
+  .shell .sidebar { background: rgba(255, 255, 255, .98); border-bottom: 1px solid var(--line); box-shadow: 0 6px 20px rgba(22, 33, 27, .08); }
+  .mobile-menu-button { color: var(--red2); background: #fff3f1; border-color: #e7c4c0; }
+  .mobile-menu-open .sidebar .nav button { color: #45544b; }
+  .mobile-menu-open .sidebar .nav button.active { color: var(--red2); }
+  .workspace .topbar { background: rgba(255, 255, 255, .96); }
+  .login-visual { min-height: 315px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .hydra-start-panel > header { padding: 17px; flex-direction: column; gap: 10px; }
+  .hydra-action-grid { padding: 10px; }
+  .hydra-action-card { min-height: 190px; }
+  .hydra-start-panel > footer { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 560px) {
+  .hydra-start-panel > header h2 { font-size: 21px; }
+  .hydra-action-grid { grid-template-columns: 1fr; }
+  .hydra-action-card.priority { grid-column: auto; }
+  .hydra-action-card { min-height: 0; padding: 15px; grid-template-columns: 36px 1fr; }
+  .hydra-card-number { width: 36px; height: 36px; border-radius: 10px; }
+  .hydra-action-card h3 { font-size: 16px; }
+  .hydra-action-card button { width: 100%; }
+  .hydra-start-panel > footer > span { grid-template-columns: 1fr; gap: 1px; text-align: center; }
+  .role-focus-panel { padding: 14px; }
+}

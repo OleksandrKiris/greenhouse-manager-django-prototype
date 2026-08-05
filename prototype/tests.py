@@ -200,3 +200,13 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn("function workflowPanel()", enhancements)
         self.assertIn("TWÓJ PROCES", enhancements)
         self.assertIn("workflow-panel", styles)
+
+    def test_hydra_inspired_start_panel_keeps_only_primary_dashboard_actions(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        styles = (static_dir / "enhancements.css").read_text(encoding="utf-8")
+        self.assertIn("hydra-start-panel", enhancements)
+        self.assertIn("Najpierw wybierz, czego potrzebujesz", enhancements)
+        self.assertIn("function simplifyDashboard()", enhancements)
+        self.assertIn("hydra-action-grid", styles)
+        self.assertIn("System wizualny inspirowany CITRONEX Hydra", styles)

@@ -10,6 +10,7 @@ Publiczna makieta aplikacji zastępującej zeszyty brygadzistów w szklarni. Rep
 
 - logowanie i wybór roli,
 - firmowe logo oraz odświeżony, responsywny system wizualny dla komputerów, tabletów i telefonów,
+- spokojny system wizualny inspirowany portalem CITRONEX Hydra: białe powierzchnie, stonowana czerwień, proste karty i jeden wyróżniony pierwszy krok,
 - wspólny kontekst daty, zmiany, obiektu i wyszukiwania oraz modułowe centra decyzji z filtrami i szybkimi akcjami,
 - personalizację według roli: ograniczony zakres danych, ukryte niedozwolone operacje, własne priorytety i czytelny opis uprawnień,
 - czytelny przebieg pracy zależny od roli, pokazujący bieżący etap, następny krok, elementy gotowe i sprawy wymagające uwagi,

@@ -266,36 +266,69 @@
 
   function dashboardPanel() {
     const { state } = context;
-    const planningTarget = state.role === "Kadry" ? "attendance" : "planning";
-    const planningLabel = state.role === "Kadry" ? "Sprawdź obecność" : "Sprawdź plan";
-    const issueTarget = state.role === "Ochrona roślin" ? "crop" : state.role === "Kadry" ? "reports" : "tickets";
-    const issueLabel = state.role === "Ochrona roślin" ? "Obsłuż obserwacje" : state.role === "Kadry" ? "Sprawdź raport" : "Obsłuż problemy";
     const planScope = state.role === "Brygadzista" ? state.plan.filter((item) => item.site === state.selectedSite) : state.plan;
     const missing = planScope.reduce((sum, item) => sum + Math.max(0, item.need - item.assigned), 0);
     const unpublished = state.role === "Brygadzista" ? Number(!state.planPublication[state.selectedSite]) : Object.values(state.planPublication).filter((value) => !value).length;
     const critical = openTickets().filter((ticket) => ticket.priority === "Krytyczny").length;
     const present = state.employees.filter((employee) => employee.status === "Obecny").length;
     const unsettled = state.employees.filter((employee) => employee.status === "Nieustalony").length;
-    const activeCrop = openObservations();
-    const metricsByRole = {
-      Brygadzista: [metric("Braki w mojej obsadzie", missing, "osób w planie szklarni", missing ? "amber" : "green"), metric("Mój plan", unpublished ? "Roboczy" : "Opublikowany", unpublished ? "czeka na kierownika" : "gotowy do realizacji", unpublished ? "blue" : "green"), metric("Krytyczne w obiekcie", critical, "zgłoszenia mojej szklarni", critical ? "red" : "green"), metric("Gotowość brygady", `${Math.max(0, 100 - missing * 8 - critical * 10)}%`, "obsada + bezpieczeństwo")],
-      Kierownik: [metric("Braki obsady", missing, "osób we wszystkich planach", missing ? "amber" : "green"), metric("Plany robocze", unpublished, "obiektów czeka na publikację", unpublished ? "blue" : "green"), metric("Krytyczne usterki", critical, "wymagają reakcji", critical ? "red" : "green"), metric("Gotowość zmiany", `${Math.max(0, 100 - missing * 4 - critical * 8)}%`, "plan + obsada + bezpieczeństwo")],
-      "Ochrona roślin": [metric("Alarmy", activeCrop.filter((item) => item.severity === "high").length, "wysoki poziom ryzyka", "red"), metric("Do kontroli", activeCrop.filter((item) => item.severity === "medium").length, "średni poziom", "amber"), metric("Bez właściciela", activeCrop.filter((item) => item.owner.includes("kolejka")).length, "czeka na przypisanie", "blue"), metric("Aktywne obserwacje", activeCrop.length, "we wszystkich szklarniach")],
-      "Dział techniczny": [metric("Krytyczne", critical, "reakcja natychmiastowa", "red"), metric("Nowe", openTickets().filter((ticket) => ticket.status === "Nowe").length, "czekają na przyjęcie", "amber"), metric("W kolejce", openTickets().filter((ticket) => ticket.owner.includes("kolejka")).length, "bez technika", "blue"), metric("W realizacji", openTickets().filter((ticket) => ticket.status === "W realizacji").length, "aktywne naprawy")],
-      Kadry: [metric("Obecni", present, `z ${state.employees.length} pokazanych`), metric("Nieustaleni", unsettled, "wymagają wyjaśnienia", unsettled ? "red" : "green"), metric("Nieobecni", state.employees.length - present - unsettled, "urlop lub zwolnienie", "blue"), metric("Gotowość danych", `${Math.round((state.employees.length - unsettled) / state.employees.length * 100)}%`, "do rozliczenia zmiany")],
+    const cropAlarms = openObservations().filter((item) => item.severity === "high").length;
+    const cropQueued = openObservations().filter((item) => item.owner.includes("kolejka")).length;
+    const ticketQueued = openTickets().filter((ticket) => ticket.owner.includes("kolejka")).length;
+    const cardsByRole = {
+      Brygadzista: [
+        critical
+          ? ["priority", "ZACZNIJ TUTAJ", "Krytyczny problem w Twojej szklarni", `${critical} zgłoszenie wymaga natychmiastowego sprawdzenia.`, "tickets", "Otwórz problem"]
+          : unsettled
+            ? ["priority", "ZACZNIJ TUTAJ", "Potwierdź obecność brygady", `${unsettled} osoba nadal ma status nieustalony.`, "attendance", "Sprawdź obecność"]
+            : ["priority", "ZACZNIJ TUTAJ", "Przejdź do aktualnych prac", `${activeTasks().length} prace są teraz realizowane w ${state.selectedSite}.`, "tasks", "Otwórz prace"],
+        ["green", "PLAN KIEROWNIKA", unpublished ? "Plan czeka na publikację" : "Plan jest gotowy do realizacji", missing ? `Do obsady brakuje ${missing} os.` : "Obsada planu jest kompletna.", "planning", "Zobacz plan"],
+        ["gold", "NA KONIEC ZMIANY", "Wyniki i raport brygady", "Sprawdź osoby, czas, kilogramy lub rzędy i zamknij zmianę.", "reports", "Przejdź do raportu"],
+      ],
+      Kierownik: [
+        critical
+          ? ["priority", "ZACZNIJ TUTAJ", "Reakcja na krytyczne zgłoszenia", `${critical} zgłoszenie ma najwyższy priorytet i aktywne SLA.`, "tickets", "Otwórz zgłoszenia"]
+          : missing || unpublished
+            ? ["priority", "ZACZNIJ TUTAJ", "Dokończ plan przedsiębiorstwa", `${missing} brakujących osób · ${unpublished} planów roboczych.`, "planning", "Otwórz plan"]
+            : ["priority", "ZACZNIJ TUTAJ", "Zmiana jest gotowa do nadzoru", "Plany są opublikowane, a obsada została sprawdzona.", "tasks", "Kontroluj realizację"],
+        ["green", "LUDZIE I WYKONANIE", "Sprawdź aktualną realizację", `${present} obecnych · ${activeTasks().length} aktywnych prac.`, "tasks", "Zobacz wykonanie"],
+        ["gold", "DECYZJE", "Zatwierdź raport zmiany", "Kompletność danych, wyjątki oraz wynik całego przedsiębiorstwa.", "reports", "Otwórz raport"],
+      ],
+      "Ochrona roślin": [
+        ["priority", "ZACZNIJ TUTAJ", cropAlarms ? "Obsłuż alarmy upraw" : "Sprawdź nowe obserwacje", cropAlarms ? `${cropAlarms} alarmy wymagają oceny i przypisania działania.` : "Brak alarmów wysokiego ryzyka; sprawdź kolejkę obserwacji.", "crop", "Otwórz obserwacje"],
+        ["green", "KONTEKST", "Zobacz plan prac", "Sprawdź, gdzie pracują brygady i co może wpływać na uprawę.", "planning", "Zobacz plan"],
+        ["gold", "PRZEKAZANIE", "Przygotuj raport ochrony", "Właściciel, działanie, lokalizacja i historia pozostają w jednym wpisie.", "reports", "Otwórz raport"],
+      ],
+      "Dział techniczny": [
+        ["priority", "ZACZNIJ TUTAJ", critical ? "Obsłuż krytyczne zgłoszenie" : "Sprawdź kolejkę techniczną", critical ? `${critical} zgłoszenie wymaga natychmiastowej reakcji.` : `${openTickets().length} aktywnych zgłoszeń do sprawdzenia.`, "tickets", "Otwórz kolejkę"],
+        ["green", "KONTEKST PRACY", "Sprawdź plan obiektu", "Zobacz wpływ usterki na brygadę, miejsce i aktualne zadania.", "planning", "Zobacz plan"],
+        ["gold", "PRZEKAZANIE", "Uzupełnij historię napraw", "Status, realizujący, czas reakcji i potwierdzenie rozwiązania.", "reports", "Otwórz raport"],
+      ],
+      Kadry: [
+        ["priority", "ZACZNIJ TUTAJ", unsettled ? "Wyjaśnij nieustaloną obecność" : "Sprawdź czas pracy", unsettled ? `${unsettled} osoba blokuje kompletne rozliczenie.` : "Statusy są kompletne; sprawdź indywidualne godziny i przerwy.", "attendance", "Otwórz czas pracy"],
+        ["green", "PRACOWNICY", "Dokumenty i bilans godzin", "Dostępność, kompetencje i kończące się dokumenty.", "team", "Otwórz pracowników"],
+        ["gold", "ROZLICZENIE", "Zatwierdź dane kadrowe", "Obecność, czas netto, wyjątki i eksport bieżącej zmiany.", "reports", "Otwórz raport"],
+      ],
     };
-    const stepsByRole = {
-      Brygadzista: [["red", "Najpierw", "Problemy blokujące moją brygadę"], ["amber", "Następnie", "Braki ludzi w moim planie"], ["green", "Na końcu", "Wyniki i raport mojej zmiany"]],
-      Kierownik: [["red", "Najpierw", "Krytyczne SLA i zatrzymane prace"], ["amber", "Następnie", "Braki ludzi i plany robocze"], ["green", "Na końcu", "Wynik całego przedsiębiorstwa"]],
-      "Ochrona roślin": [["red", "Najpierw", "Alarmy wysokiego ryzyka"], ["amber", "Następnie", "Przypisanie kolejki obserwacji"], ["green", "Na końcu", "Kontrola skuteczności działania"]],
-      "Dział techniczny": [["red", "Najpierw", "Krytyczne zgłoszenia i SLA"], ["amber", "Następnie", "Nowe wpisy bez technika"], ["green", "Na końcu", "Potwierdzenie naprawy i historia"]],
-      Kadry: [["red", "Najpierw", "Nieustalona obecność"], ["amber", "Następnie", "Dokumenty i korekty godzin"], ["green", "Na końcu", "Kompletny eksport kadrowy"]],
+    const cards = cardsByRole[state.role];
+    const startMetric = (value, label, tone = "") => `<span class="${tone}"><b>${value}</b><small>${label}</small></span>`;
+    const footerByRole = {
+      Brygadzista: `${startMetric(present, "obecnych")}${startMetric(activeTasks().length, "aktywnych prac")}${startMetric(critical, "krytycznych problemów", critical ? "danger" : "")}${startMetric(missing, "brakujących osób", missing ? "warn" : "")}`,
+      Kierownik: `${startMetric(present, "obecnych w podglądzie")}${startMetric(activeTasks().length, "aktywnych prac")}${startMetric(critical, "krytycznych problemów", critical ? "danger" : "")}${startMetric(unpublished, "planów roboczych", unpublished ? "warn" : "")}`,
+      "Ochrona roślin": `${startMetric(openObservations().length, "aktywnych obserwacji")}${startMetric(cropAlarms, "alarmów", cropAlarms ? "danger" : "")}${startMetric(cropQueued, "bez właściciela", cropQueued ? "warn" : "")}${startMetric(featureState.protectionTaskCreated ? "Tak" : "Nie", "działanie utworzone")}`,
+      "Dział techniczny": `${startMetric(openTickets().length, "aktywnych zgłoszeń")}${startMetric(critical, "krytycznych", critical ? "danger" : "")}${startMetric(ticketQueued, "bez technika", ticketQueued ? "warn" : "")}${startMetric(openTickets().filter((ticket) => ticket.status === "W realizacji").length, "w realizacji")}`,
+      Kadry: `${startMetric(present, "obecnych")}${startMetric(unsettled, "nieustalonych", unsettled ? "danger" : "")}${startMetric(state.employees.filter((employee) => employee.status === "Obecny" && employee.breaks?.length === 2).length, "z dwiema przerwami")}${startMetric(`${Math.floor(state.employees.reduce((sum, employee) => sum + employeeNetMinutes(employee), 0) / 60)} h`, "czasu netto")}`,
     };
-    return `<section class="module-upgrade dashboard-upgrade">
-      <div class="upgrade-head"><div><span class="kicker">CENTRUM DECYZJI</span><h2>Najważniejsze na tej zmianie</h2><p>Każda rola od razu widzi, co wymaga reakcji, a co jest już pod kontrolą.</p></div><div class="upgrade-actions"><button class="secondary" data-module-action="quick-nav" data-target="${planningTarget}">${planningLabel}</button><button class="primary" data-module-action="quick-nav" data-target="${issueTarget}">${issueLabel}</button></div></div>
-      <div class="upgrade-metrics">${metricsByRole[state.role].join("")}</div>
-      <div class="decision-lane">${stepsByRole[state.role].map(([tone, title, copy], index) => `${index ? "<em>→</em>" : ""}<span><i class="${tone}"></i><b>${title}</b><small>${copy}</small></span>`).join("")}</div>
+    return `<section class="hydra-start-panel">
+      <header><div><span class="kicker">PANEL STARTOWY · ${escapeHtml(state.role)}</span><h2>Najpierw wybierz, czego potrzebujesz</h2><p>Najważniejsza czynność jest zawsze pierwsza. Pozostałe informacje otworzysz dopiero wtedy, gdy będą potrzebne.</p></div><span class="hydra-live"><i></i> ${state.currentOnly ? "Tylko aktualne" : "Aktualne i historia"}</span></header>
+      <div class="hydra-action-grid">${cards.map(([tone, label, title, copy, target, buttonLabel], index) => `<article class="hydra-action-card ${tone}"><i class="hydra-card-number">${String(index + 1).padStart(2, "0")}</i><div><span>${label}</span><h3>${title}</h3><p>${copy}</p><button class="${tone === "priority" ? "primary" : "secondary"}" data-module-action="quick-nav" data-target="${target}">${buttonLabel} <b>→</b></button></div></article>`).join("")}</div>
+      <footer>${footerByRole[state.role]}</footer>
     </section>`;
+  }
+
+  function simplifyDashboard() {
+    if (context.state.screen !== "dashboard") return;
+    context.app.querySelectorAll(".content > .scope-strip, .content > .hero, .content > .metrics, .content > .two-col").forEach((element) => element.remove());
   }
 
   function planningPanel() {
@@ -558,6 +591,7 @@
     pageHead.insertAdjacentHTML("afterend", `${contextBar()}${guidance}${designStudioPanel()}${modulePanel()}`);
     applyRolePermissions();
     renderFlexibleAttendance();
+    simplifyDashboard();
     decorateReviewBlocks();
     applyFilters();
   }
