@@ -21,6 +21,7 @@ Publiczna makieta aplikacji zastępującej zeszyty brygadzistów w szklarni. Rep
 - usterki, właściciele, statusy i czas reakcji SLA,
 - materiały, stany minimalne, wydania i zapotrzebowania,
 - centrum powiadomień i akceptacje kierownika,
+- wygodny widok telefonu i tabletu z dolnymi skrótami, rozwijanym menu i pełnoekranowymi formularzami,
 - raport zmiany i walidację brakujących danych,
 - zbieranie komentarzy do makiety i eksport opinii do JSON.
 

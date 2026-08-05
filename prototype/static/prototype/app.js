@@ -105,9 +105,10 @@
     selectedTask: null,
     selectedEmployee: null,
     selectedMaterial: null,
-    review: true,
+    review: !window.matchMedia("(max-width: 900px)").matches,
     feedbackOpen: false,
     notificationsOpen: false,
+    mobileNavOpen: false,
     planPublished: false,
     approvedItems: [],
     feedback: loadFeedback(),
@@ -146,6 +147,7 @@
     if (!access[state.role].includes(screen)) screen = access[state.role][0];
     state.screen = screen;
     state.modal = null;
+    state.mobileNavOpen = false;
     history.replaceState(null, "", `#${screen}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
     render();
@@ -287,8 +289,10 @@
     const nav = visibleNav(); const index = nav.findIndex((item) => item[0] === state.screen);
     const screens = { dashboard, planning, attendance, tasks, productivity, team, crop, tickets, materials, reports };
     const unread = state.notifications.filter((item)=>!item.read).length;
-    return `<div class="shell"><aside class="sidebar"><div class="brand"><span>CITR</span><i>O</i><span>NEX</span></div><small class="brand-sub">GREENHOUSE MANAGER · DJANGO</small><nav class="nav" aria-label="Nawigacja główna">${nav.map((item)=>`<button class="${state.screen===item[0]?"active":""}" data-nav="${item[0]}"><i>${item[3]}</i>${item[1]}</button>`).join("")}</nav><div class="role-switch"><span class="kicker light">PODGLĄD ROLI</span><select data-change="role" aria-label="Zmień rolę">${roles.map((role)=>`<option ${state.role===role?"selected":""}>${role}</option>`).join("")}</select></div><button class="user" data-action="logout"><i class="avatar">AK</i><span><b>Anna Kowalska</b><small>${state.role}</small></span><span>↩</span></button></aside>
+    const mobileTabs = ["dashboard","planning","tasks","reports"].filter((screen)=>access[state.role].includes(screen)).map((screen)=>navItems.find((item)=>item[0]===screen));
+    return `<div class="shell ${state.mobileNavOpen?"mobile-menu-open":""} ${state.review?"reviewing":""}"><aside class="sidebar"><div class="sidebar-title"><div class="brand"><span>CITR</span><i>O</i><span>NEX</span></div><button class="mobile-menu-button" data-action="toggle-mobile-nav" aria-expanded="${state.mobileNavOpen}" aria-label="${state.mobileNavOpen?"Zamknij menu":"Otwórz menu"}"><i>${state.mobileNavOpen?"×":"☰"}</i><span>Menu</span></button></div><small class="brand-sub">GREENHOUSE MANAGER · DJANGO</small><nav class="nav" aria-label="Nawigacja główna">${nav.map((item)=>`<button class="${state.screen===item[0]?"active":""}" data-nav="${item[0]}"><i>${item[3]}</i>${item[1]}</button>`).join("")}</nav><div class="role-switch"><span class="kicker light">PODGLĄD ROLI</span><select data-change="role" aria-label="Zmień rolę">${roles.map((role)=>`<option ${state.role===role?"selected":""}>${role}</option>`).join("")}</select></div><button class="user" data-action="logout"><i class="avatar">AK</i><span><b>Anna Kowalska</b><small>${state.role}</small></span><span>↩</span></button></aside>
       <div class="workspace"><header class="topbar"><div class="shift-info"><span>BIEŻĄCA ZMIANA</span><b>05.08.2026 · Zmiana poranna</b></div><div class="top-actions"><button class="notification-button" data-action="open-notifications" aria-label="Powiadomienia">●<span>Powiadomienia</span>${unread?`<b>${unread}</b>`:""}</button><button class="review-toggle" data-action="toggle-review">● Tryb oceny makiety</button><span class="state-pill ${state.shiftClosed?"closed":""}">${state.shiftClosed?"ZAMKNIĘTA":"W TRAKCIE"}</span></div></header><main class="content">${screens[state.screen]()}</main><div class="journey"><button data-nav="${nav[Math.max(0,index-1)][0]}" ${index<=0?"disabled":""}>← Poprzedni</button><div class="steps">${nav.map((item,i)=>`<button class="${i<index?"done":""} ${i===index?"active":""}" data-nav="${item[0]}"><i>${i+1}</i><small>${item[2]}</small></button>`).join("")}</div><button data-nav="${nav[Math.min(nav.length-1,index+1)][0]}" ${index>=nav.length-1?"disabled":""}>Następny →</button></div></div>
+      <nav class="mobile-bottom-nav" aria-label="Skróty mobilne">${mobileTabs.map((item)=>`<button class="${state.screen===item[0]?"active":""}" data-nav="${item[0]}"><i>${item[3]}</i><span>${item[2]}</span></button>`).join("")}<button class="${state.mobileNavOpen?"active":""}" data-action="toggle-mobile-nav"><i>☰</i><span>Menu</span></button></nav>
       ${state.review ? `<section class="review-bar"><div class="review-context"><i>●</i><span><b>Ocena: ${navItems.find((item)=>item[0]===state.screen)[1]}</b><small>${state.role} · zapis lokalny</small></span></div><input id="review-note" placeholder="Co zostawić albo zmienić?" aria-label="Komentarz do makiety"><button class="fit" data-action="feedback-fit">✓ Pasuje</button><button class="change" data-action="feedback-change">↺ Do zmiany</button><button class="feedback-open" data-action="open-feedback">Uwagi <b>${Object.keys(state.feedback).length}</b></button></section>`:""}
       ${modalHtml()}${feedbackDrawer()}${notificationsDrawer()}${state.toast?`<div class="toast" role="status"><i>✓</i>${esc(state.toast)}</div>`:""}</div>`;
   }
@@ -304,6 +308,7 @@
     else if (action === "login") { state.loggedIn = true; if (!access[state.role].includes(state.screen)) state.screen = access[state.role][0]; history.replaceState(null,"",`#${state.screen}`); render(); }
     else if (action === "logout") { state.loggedIn = false; history.replaceState(null,"",location.pathname); render(); }
     else if (action === "toggle-review") { state.review = !state.review; render(); }
+    else if (action === "toggle-mobile-nav") { state.mobileNavOpen = !state.mobileNavOpen; render(); }
     else if (action === "new-plan" || action === "edit-plan") { state.modal = "new-plan"; render(); }
     else if (action === "fill-plan") { const item=state.plan.find((plan)=>plan.id===Number(button.dataset.id)); item.assigned=Math.min(item.need,item.assigned+1); const alert=state.notifications.find((notice)=>notice.id===2); if(state.plan.every((plan)=>plan.assigned>=plan.need))alert.read=true; notify("Obsada pozycji została uzupełniona"); }
     else if (action === "fill-all-plan") { state.plan.forEach((item)=>{item.assigned=item.need;}); state.notifications.find((item)=>item.id===2).read=true; notify("System uzupełnił luki dostępnymi pracownikami"); }
@@ -339,7 +344,7 @@
 
   app.addEventListener("change", (event) => {
     const control = event.target.closest("[data-change]"); if (!control) return;
-    if (control.dataset.change === "role") { state.role = control.value; if (!access[state.role].includes(state.screen)) state.screen = access[state.role][0]; history.replaceState(null,"",`#${state.screen}`); notify(`Widok roli: ${state.role}`); }
+    if (control.dataset.change === "role") { state.role = control.value; state.mobileNavOpen=false; if (!access[state.role].includes(state.screen)) state.screen = access[state.role][0]; history.replaceState(null,"",`#${state.screen}`); notify(`Widok roli: ${state.role}`); }
     if (control.dataset.change === "attendance") { const employee = state.employees.find((item)=>item.id===Number(control.dataset.id)); employee.status = control.value; employee.start = control.value === "Obecny" ? "06:00" : "—"; employee.end = control.value === "Obecny" ? "14:15" : "—"; employee.breakMinutes = control.value === "Obecny" ? 30 : 0; render(); }
     if (control.dataset.change === "ticket-status") { const ticket = state.tickets.find((item)=>item.id===Number(control.dataset.id)); ticket.status = control.value; notify("Status zgłoszenia zaktualizowany"); }
   });

@@ -38,3 +38,11 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn('name="row"', script)
         self.assertIn('name="cart"', script)
         self.assertIn("contributions", script)
+
+    def test_mobile_navigation_is_part_of_the_prototype(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        script = (static_dir / "app.js").read_text(encoding="utf-8")
+        styles = (static_dir / "styles.css").read_text(encoding="utf-8")
+        self.assertIn("mobile-bottom-nav", script)
+        self.assertIn("toggle-mobile-nav", script)
+        self.assertIn("@media(max-width:900px)", styles)
