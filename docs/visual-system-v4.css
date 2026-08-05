@@ -481,6 +481,23 @@ html { background: var(--v4-canvas); }
 .visual-system-v4 .context-schedule select,
 .visual-system-v4 .context-controls input,
 .visual-system-v4 .context-controls select { min-height: 44px; font-size: 13px; }
+.visual-system-v4 .context-current-shift {
+  grid-column: 1 / -1;
+  min-height: 42px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--v4-green-800);
+  background: var(--v4-green-50);
+  border: 1px solid #bed9c8;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.visual-system-v4 .context-current-shift .v4-icon { width: 17px; height: 17px; }
+.visual-system-v4 .context-current-shift:hover { color: #fff; background: var(--v4-green-800); }
 
 .visual-system-v4 .context-saved {
   min-height: 40px;
@@ -498,6 +515,12 @@ html { background: var(--v4-canvas); }
 .visual-system-v4 .context-saved > i .v4-icon { width: 17px; height: 17px; }
 .visual-system-v4 .context-saved b { display: block; font-size: 11px; line-height: 1.1; }
 .visual-system-v4 .context-saved small { margin: 2px 0 0; display: block; color: #668073; font-size: 10px; line-height: 1.1; letter-spacing: 0; text-transform: none; }
+.visual-system-v4 .context-saved.saving { color: #73510c; background: var(--v4-amber-soft); border-color: #e7d196; }
+.visual-system-v4 .context-saved.saving > i { color: var(--v4-amber); animation: ux-spin .85s linear infinite; }
+.visual-system-v4 .context-saved.offline,
+.visual-system-v4 .context-saved.error { color: #8f1f2d; background: var(--v4-red-soft); border-color: #e3b1b7; }
+.visual-system-v4 .context-saved.offline > i,
+.visual-system-v4 .context-saved.error > i { color: var(--v4-red); }
 
 .visual-system-v4 .context-controls {
   padding: 12px 13px 13px;
@@ -508,6 +531,7 @@ html { background: var(--v4-canvas); }
 }
 .visual-system-v4 .context-fixed { min-height: 44px; padding: 7px 11px; background: var(--v4-surface-soft); border-color: var(--v4-line); }
 .visual-system-v4 .context-fixed b { overflow: hidden; color: #294236; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.visual-system-v4 .context-fixed > small { margin-top: 2px; display: block; overflow: hidden; color: #718178; font-size: 10px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
 .visual-system-v4 .context-search { position: relative; min-width: 0; }
 .visual-system-v4 .context-search input { width: 100%; padding-left: 41px; padding-right: 112px; }
 .visual-system-v4 .v4-context-search-icon {
@@ -533,7 +557,72 @@ html { background: var(--v4-canvas); }
   font-size: 11px;
 }
 .visual-system-v4 .ux-filter-menu > summary .v4-icon { width: 15px; height: 15px; }
+.visual-system-v4 .ux-filter-menu > summary > b {
+  min-width: 18px;
+  height: 18px;
+  padding-inline: 4px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--v4-green-800);
+  border-radius: 99px;
+  font-size: 9px;
+}
 .visual-system-v4 .ux-filter-menu button { min-height: 42px; font-size: 12px; }
+
+.visual-system-v4 .context-active-row {
+  min-height: 37px;
+  padding: 7px 13px 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64766b;
+  border-top: 1px solid #edf1ee;
+}
+.visual-system-v4 .context-active-row.has-filters { background: #fbfcfb; }
+.visual-system-v4 .context-active-label {
+  flex: 0 0 auto;
+  color: #65776c;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+.visual-system-v4 .context-chips { min-width: 0; display: flex; align-items: center; gap: 6px; overflow-x: auto; }
+.visual-system-v4 .context-chips button {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 3px 6px 3px 9px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #244c38;
+  background: var(--v4-green-100);
+  border: 1px solid #c5dfce;
+  border-radius: 99px;
+}
+.visual-system-v4 .context-chips button small { color: #648071; font-size: 9px; }
+.visual-system-v4 .context-chips button b { max-width: 180px; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.visual-system-v4 .context-chips button > i { width: 20px; height: 20px; color: var(--v4-green-800); background: rgba(255, 255, 255, .7); border-radius: 50%; }
+.visual-system-v4 .context-chips button > i .v4-icon { width: 12px; height: 12px; }
+.visual-system-v4 .context-chips button:hover { color: #fff; background: var(--v4-green-800); border-color: var(--v4-green-800); }
+.visual-system-v4 .context-chips button:hover small,
+.visual-system-v4 .context-chips button:hover > i { color: #fff; }
+.visual-system-v4 .context-clear-all {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding-inline: 9px;
+  color: #6a4d17;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 800;
+}
+.visual-system-v4 .context-clear-all:hover { color: #fff; background: var(--v4-amber); }
+.visual-system-v4 .context-no-filters { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; }
+.visual-system-v4 .context-no-filters > i { width: 20px; height: 20px; color: var(--v4-green-800); }
+.visual-system-v4 .context-no-filters > i .v4-icon { width: 15px; height: 15px; }
 
 .visual-system-v4 .hero {
   min-height: 238px;
@@ -951,6 +1040,9 @@ html { background: var(--v4-canvas); }
   .visual-system-v4 .context-saved { justify-self: end; }
   .visual-system-v4 .context-controls { grid-template-columns: 1fr; }
   .visual-system-v4 .context-search { grid-column: auto; }
+  .visual-system-v4 .context-active-row { align-items: flex-start; flex-wrap: wrap; }
+  .visual-system-v4 .context-chips { order: 3; width: 100%; }
+  .visual-system-v4 .context-clear-all { margin-left: auto; }
 
   .visual-system-v4 .table .tr.head,
   .visual-system-v4 .team-head { display: none; }
@@ -1013,6 +1105,10 @@ html { background: var(--v4-canvas); }
   .visual-system-v4 .context-saved { padding-inline: 7px; }
   .visual-system-v4 .context-saved small { display: none; }
   .visual-system-v4 .context-controls { padding: 10px; }
+  .visual-system-v4 .context-active-row { padding-inline: 10px; }
+  .visual-system-v4 .context-active-label { display: none; }
+  .visual-system-v4 .context-no-filters { font-size: 10px; }
+  .visual-system-v4 .context-chips button b { max-width: 128px; }
   .visual-system-v4 .hero h2 { font-size: 32px; }
   .visual-system-v4 .metrics { gap: 8px; }
   .visual-system-v4 .metric { min-height: 108px; padding: 14px; }

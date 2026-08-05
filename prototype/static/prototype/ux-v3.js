@@ -113,18 +113,66 @@
       .filter(Boolean))].sort((a, b) => a.localeCompare(b, "pl"));
   }
 
+  function moduleContextControl(foremen) {
+    const { role, screen } = context.state;
+    if (["planning", "tasks"].includes(screen)) {
+      return `<label class="ux-brigade-filter"><span>${screen === "planning" ? "Brygada planu" : "Brygadzista realizujący"}</span><select data-ux-change="brigade"><option>Wszystkie brygady</option>${foremen.map((name) => `<option ${ux.brigade === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label>`;
+    }
+    const details = {
+      dashboard: ["Priorytet widoku", context.state.currentOnly ? "Tylko aktualne" : "Aktualne i historia", "najpilniejsze pozycje są pierwsze"],
+      attendance: ["Brygada", role === "Brygadzista" ? "Moja brygada" : "Wszystkie brygady", "szczegóły godzin tylko w tym module"],
+      productivity: ["Jednostki wyniku", "rz./h i kg/h", "liczone osobno dla każdej osoby"],
+      team: ["Widok danych", role === "Kadry" ? "Pracownicy i dokumenty" : "Dostępność i kompetencje", "zgodnie z zakresem roli"],
+      crop: ["Wybrane miejsce", `${context.state.selectedCropSite} · ${context.state.selectedCropNave}`, "szczegóły wjazdu są na mapie"],
+      tickets: ["Kolejka", context.state.currentOnly ? "Aktywne zgłoszenia" : "Aktualne i historia", "krytyczne i nowe są pierwsze"],
+      materials: ["Stan magazynowy", "Wszystkie materiały", "niskie stany są pierwsze"],
+      reports: ["Okres raportu", "Bieżąca zmiana", "agregacja zatwierdzonych danych"],
+    }[screen] || ["Widok", screenLabels[screen], "zakres bieżącego modułu"];
+    return `<div class="context-fixed ux-module-context"><span>${details[0]}</span><b>${escapeHtml(details[1])}</b><small>${escapeHtml(details[2])}</small></div>`;
+  }
+
+  function activeModuleFilter() {
+    const segments = context.app.querySelector(".upgrade-segments");
+    if (!segments) return null;
+    const buttons = Array.from(segments.querySelectorAll("button"));
+    const active = buttons.find((button) => button.classList.contains("active"));
+    if (!active || active === buttons[0]) return null;
+    return { label: segments.getAttribute("aria-label") || "Filtr", value: active.textContent.trim(), reset: buttons[0] };
+  }
+
+  function renderContextChips() {
+    const row = context.app.querySelector("[data-context-active-row]");
+    if (!row) return;
+    const chips = [];
+    const search = context.app.querySelector("[data-module-search]")?.value.trim() || "";
+    const scope = context.app.querySelector('[data-module-change="scope"]')?.value || "";
+    const moduleFilter = activeModuleFilter();
+    if (scope && scope !== "Wszystkie obiekty") chips.push(["scope", "Obiekt", scope]);
+    if (ux.brigade !== "Wszystkie brygady" && ["planning", "tasks"].includes(context.state.screen)) chips.push(["brigade", "Brygada", ux.brigade]);
+    if (moduleFilter) chips.push(["module", moduleFilter.label, moduleFilter.value]);
+    if (search && search !== ux.brigade) chips.push(["search", "Szukaj", search]);
+    if (!context.state.currentOnly) chips.push(["history", "Widok", "Historia włączona"]);
+
+    row.innerHTML = chips.length
+      ? `<span class="context-active-label">Aktywne filtry</span><div class="context-chips">${chips.map(([id, label, value]) => `<button type="button" data-ux-action="clear-context-${id}" title="Usuń filtr: ${escapeHtml(label)} ${escapeHtml(value)}"><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b><i aria-hidden="true">×</i></button>`).join("")}</div><button type="button" class="context-clear-all" data-ux-action="clear-context-all">Wyczyść wszystko</button>`
+      : `<span class="context-no-filters"><i aria-hidden="true">✓</i> Brak dodatkowych filtrów · pokazujemy domyślny zakres tego modułu</span>`;
+    row.classList.toggle("has-filters", Boolean(chips.length));
+
+    const menu = context.app.querySelector(".ux-filter-menu");
+    if (menu) menu.dataset.activeCount = String(chips.length);
+    window.GreenhouseVisualV4?.refreshContext?.();
+  }
+
   function enhanceContextBar() {
     const bar = context.app.querySelector(".operations-context");
     const search = bar?.querySelector(".context-search");
     if (!bar || !search) return;
     const foremen = availableForemen();
     if (!foremen.includes(ux.brigade)) ux.brigade = "Wszystkie brygady";
-    const supportsBrigade = ["planning", "tasks"].includes(context.state.screen);
-    search.insertAdjacentHTML("beforebegin", supportsBrigade
-      ? `<label class="ux-brigade-filter"><span>Brygada / odpowiedzialny</span><select data-ux-change="brigade"><option>Wszystkie brygady</option>${foremen.map((name) => `<option ${ux.brigade === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label>`
-      : `<div class="context-fixed ux-brigade-filter"><span>Brygada</span><b>${context.state.role === "Brygadzista" ? "Moja brygada" : "Zakres modułu"}</b></div>`);
+    search.insertAdjacentHTML("beforebegin", moduleContextControl(foremen));
     const saved = ux.savedFilters[context.state.screen];
     search.insertAdjacentHTML("beforeend", `<details class="ux-filter-menu"><summary aria-label="Szybkie filtry">Filtry</summary><div>${issueSearch[context.state.screen] ? `<button type="button" data-ux-action="filter-issues">Tylko wymagające uwagi</button>` : ""}<button type="button" data-ux-action="filter-reset">Wyczyść filtry</button><button type="button" data-ux-action="filter-save">Zapisz obecny filtr</button>${saved ? `<button type="button" data-ux-action="filter-apply">Zastosuj „Mój filtr”</button>` : ""}</div></details>`);
+    renderContextChips();
   }
 
   function setSearch(value) {
@@ -162,6 +210,13 @@
   function resetFilters() {
     ux.brigade = "Wszystkie brygady";
     persist();
+    const search = context.app.querySelector("[data-module-search]");
+    if (search) search.value = "";
+    const scope = context.app.querySelector('[data-module-change="scope"]');
+    if (scope && scope.value !== "Wszystkie obiekty") {
+      scope.value = "Wszystkie obiekty";
+      scope.dispatchEvent(new Event("change", { bubbles: true }));
+    }
     if (context.state.screen === "tickets") {
       context.app.querySelector('[data-action="set-ticket-filter"][data-filter="all"]')?.click();
       return;
@@ -172,7 +227,32 @@
     }
     const select = context.app.querySelector('[data-ux-change="brigade"]');
     if (select) select.value = ux.brigade;
+    const defaultModuleFilter = activeModuleFilter()?.reset;
+    if (defaultModuleFilter) {
+      defaultModuleFilter.click();
+      return;
+    }
     setSearch("");
+    renderContextChips();
+  }
+
+  function setCurrentShift() {
+    const now = new Date();
+    const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const currentShift = now.getHours() >= 22 || now.getHours() < 6 ? "Nocna · 22:00–06:00" : now.getHours() >= 14 ? "Popołudniowa · 14:00–22:00" : "Poranna · 06:00–14:00";
+    const date = context.app.querySelector('[data-module-change="work-date"]');
+    const shift = context.app.querySelector('[data-module-change="shift"]');
+    if (date) {
+      date.value = localDate;
+      date.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    if (shift) {
+      shift.value = currentShift;
+      shift.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    const details = context.app.querySelector(".context-schedule");
+    if (details) details.open = false;
+    context.notify("Ustawiono bieżącą datę i zmianę");
   }
 
   function rolePrimaryAction() {
@@ -360,6 +440,29 @@
     const action = button.dataset.uxAction;
     if (action === "filter-issues") filterIssues();
     if (action === "filter-reset") resetFilters();
+    if (action === "current-shift") setCurrentShift();
+    if (action === "clear-context-search") setSearch("");
+    if (action === "clear-context-scope") {
+      const scope = context.app.querySelector('[data-module-change="scope"]');
+      if (scope) {
+        scope.value = "Wszystkie obiekty";
+        scope.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      renderContextChips();
+    }
+    if (action === "clear-context-brigade") {
+      const previous = ux.brigade;
+      ux.brigade = "Wszystkie brygady";
+      persist();
+      const select = context.app.querySelector('[data-ux-change="brigade"]');
+      if (select) select.value = ux.brigade;
+      const search = context.app.querySelector("[data-module-search]");
+      if (search?.value === previous) setSearch("");
+      renderContextChips();
+    }
+    if (action === "clear-context-module") activeModuleFilter()?.reset?.click();
+    if (action === "clear-context-history") context.app.querySelector(".current-view-toggle")?.click();
+    if (action === "clear-context-all") resetFilters();
     if (action === "filter-save") {
       ux.savedFilters[context.state.screen] = { search: context.app.querySelector("[data-module-search]")?.value || "", brigade: ux.brigade };
       persist();
@@ -372,6 +475,7 @@
         const select = context.app.querySelector('[data-ux-change="brigade"]');
         if (select) select.value = ux.brigade;
         setSearch(saved.search || (ux.brigade === "Wszystkie brygady" ? "" : ux.brigade));
+        renderContextChips();
       }
     }
     if (action === "attendance-exceptions") {
@@ -400,12 +504,17 @@
       const button = event.target.closest("[data-ux-action]");
       if (button && !button.disabled) handleAction(button);
     });
+    context.app.addEventListener("input", (event) => {
+      if (event.target.matches("[data-module-search]")) renderContextChips();
+    });
     context.app.addEventListener("change", (event) => {
       const select = event.target.closest('[data-ux-change="brigade"]');
-      if (!select) return;
-      ux.brigade = select.value;
-      persist();
-      if (["planning", "tasks"].includes(context.state.screen)) setSearch(ux.brigade === "Wszystkie brygady" ? "" : ux.brigade);
+      if (select) {
+        ux.brigade = select.value;
+        persist();
+        if (["planning", "tasks"].includes(context.state.screen)) setSearch(ux.brigade === "Wszystkie brygady" ? "" : ux.brigade);
+      }
+      if (event.target.closest(".operations-context")) renderContextChips();
     });
   }
 

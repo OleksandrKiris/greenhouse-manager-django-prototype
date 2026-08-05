@@ -40,6 +40,7 @@
 
   let context;
   let bound = false;
+  let saveTimer = null;
   let preferences = loadPreferences();
 
   function loadPreferences() {
@@ -92,6 +93,9 @@
   function decorateTopbar() {
     const actions = context.app.querySelector(".top-actions");
     if (!actions) return;
+    const activeModule = context.app.querySelector('.nav button.active span')?.textContent.trim() || "Podsumowanie";
+    const shiftInfo = context.app.querySelector(".shift-info");
+    if (shiftInfo) shiftInfo.innerHTML = `<span>AKTUALNY WIDOK</span><b>${activeModule} · ${context.state.role}</b>`;
     if (!actions.querySelector("[data-v4-action='greenhouse-mode']")) {
       const review = actions.querySelector(".review-toggle");
       const toggle = document.createElement("button");
@@ -104,7 +108,10 @@
     }
 
     const current = actions.querySelector(".current-view-toggle");
-    if (current) current.innerHTML = `${icon(context.state.currentOnly ? "clock-3" : "panels-top-left")}<span>${context.state.currentOnly ? "Aktualne" : "Wszystkie"}</span>`;
+    if (current) {
+      current.hidden = !["dashboard", "planning", "tasks", "crop", "tickets", "reports"].includes(context.state.screen);
+      current.innerHTML = `${icon(context.state.currentOnly ? "clock-3" : "panels-top-left")}<span>${context.state.currentOnly ? "Aktualne" : "Wszystkie"}</span>`;
+    }
 
     const notifications = actions.querySelector(".notification-button");
     if (notifications) {
@@ -161,6 +168,7 @@
   }
 
   function decorateContextBar() {
+    if (!context) return;
     const bar = context.app.querySelector(".operations-context");
     if (!bar) return;
     setIcon(bar.querySelector(".context-title > i"), "calendar-clock");
@@ -174,7 +182,59 @@
     const schedule = bar.querySelector(".context-schedule > summary");
     if (schedule) schedule.innerHTML = `${icon("calendar-clock")}<span>Zmień datę lub zmianę</span>`;
     const filters = bar.querySelector(".ux-filter-menu > summary");
-    if (filters) filters.innerHTML = `${icon("sliders-horizontal")}<span>Filtry</span>`;
+    if (filters) {
+      const count = Number(filters.parentElement.dataset.activeCount || 0);
+      filters.innerHTML = `${icon("sliders-horizontal")}<span>Filtry</span>${count ? `<b>${count}</b>` : ""}`;
+    }
+    bar.querySelectorAll(".context-chips button > i").forEach((host) => setIcon(host, "x"));
+    setIcon(bar.querySelector(".context-no-filters > i"), "circle-check");
+    const current = bar.querySelector(".context-current-shift");
+    if (current && !current.querySelector(".v4-icon")) current.insertAdjacentHTML("afterbegin", icon("locate-fixed"));
+    renderSaveState(navigator.onLine ? "saved" : "offline");
+  }
+
+  function renderSaveState(mode) {
+    const status = context?.app?.querySelector("[data-context-save-state]");
+    if (!status) return;
+    const states = {
+      saving: ["loader-circle", "Zapisywanie…", "proszę nie zamykać widoku"],
+      saved: ["circle-check-big", "Zapisano", "zmiany zapisują się automatycznie"],
+      offline: ["wifi-off", "Brak internetu", "zmiany czekają w kolejce"],
+      error: ["triangle-alert", "Błąd zapisu", "dane formularza zostały zachowane"],
+    };
+    const [stateIcon, title, detail] = states[mode] || states.saved;
+    status.dataset.contextSaveState = mode;
+    status.className = `context-saved ${mode}`;
+    status.innerHTML = `<i>${icon(stateIcon)}</i><span><b>${title}</b><small>${detail}</small></span>`;
+  }
+
+  function markSaving(event) {
+    if (!event.target.closest(".operations-context") || event.target.matches("[data-module-search]")) return;
+    if (!navigator.onLine) {
+      renderSaveState("offline");
+      return;
+    }
+    renderSaveState("saving");
+    window.clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(() => renderSaveState(navigator.onLine ? "saved" : "offline"), 650);
+  }
+
+  function markFormDirty(event) {
+    const form = event.target.closest(".modal form");
+    if (form) form.dataset.v4Dirty = "true";
+  }
+
+  function confirmDirtyClose(event) {
+    const close = event.target.closest('[data-action="close-modal"]');
+    const form = close?.closest(".modal")?.querySelector('form[data-v4-dirty="true"]');
+    if (!form) return true;
+    if (window.confirm("Masz niezapisane zmiany. Zamknąć formularz bez zapisywania?")) {
+      form.dataset.v4Dirty = "false";
+      return true;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    return false;
   }
 
   function labelResponsiveRows() {
@@ -234,10 +294,27 @@
     if (bound) return;
     bound = true;
     context.app.addEventListener("click", (event) => {
+      if (!confirmDirtyClose(event)) return;
       const button = event.target.closest("[data-v4-action]");
       if (!button) return;
       if (button.dataset.v4Action === "greenhouse-mode") toggleGreenhouseMode();
       if (button.dataset.v4Action === "map-sheet") toggleMapSheet(button);
+    });
+    context.app.addEventListener("input", markFormDirty);
+    context.app.addEventListener("change", (event) => {
+      markFormDirty(event);
+      markSaving(event);
+    });
+    context.app.addEventListener("submit", (event) => {
+      const form = event.target.closest("form");
+      if (form) form.dataset.v4Dirty = "false";
+    });
+    window.addEventListener("online", () => renderSaveState("saved"));
+    window.addEventListener("offline", () => renderSaveState("offline"));
+    window.addEventListener("beforeunload", (event) => {
+      if (!context?.app?.querySelector('form[data-v4-dirty="true"]')) return;
+      event.preventDefault();
+      event.returnValue = "";
     });
   }
 
@@ -256,5 +333,5 @@
     addPageIdentity();
   }
 
-  window.GreenhouseVisualV4 = { afterRender };
+  window.GreenhouseVisualV4 = { afterRender, refreshContext: decorateContextBar };
 })();

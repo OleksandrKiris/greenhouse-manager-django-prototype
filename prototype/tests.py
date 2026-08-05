@@ -356,3 +356,18 @@ class PrototypePageTests(SimpleTestCase):
         for marker in [".context-summary", ".context-schedule", ".context-controls", ".v4-context-search-icon"]:
             self.assertIn(marker, styles)
         self.assertIn("decorateContextBar", visual_script)
+
+    def test_context_is_module_specific_filterable_and_reports_real_save_state(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        ux_script = (static_dir / "ux-v3.js").read_text(encoding="utf-8")
+        visual_script = (static_dir / "visual-system-v4.js").read_text(encoding="utf-8")
+        styles = (static_dir / "visual-system-v4.css").read_text(encoding="utf-8")
+        for marker in ["contextProfiles", "saveFeaturePreferences", "greenhouse-context-preferences-v1", "context-current-shift", "data-context-active-row"]:
+            self.assertIn(marker, enhancements)
+        for marker in ["moduleContextControl", "renderContextChips", "setCurrentShift", "clear-context-all", "clear-context-module"]:
+            self.assertIn(marker, ux_script)
+        for marker in ["renderSaveState", "markSaving", "confirmDirtyClose", "beforeunload", "refreshContext"]:
+            self.assertIn(marker, visual_script)
+        for marker in [".context-active-row", ".context-chips", ".context-clear-all", ".context-saved.offline"]:
+            self.assertIn(marker, styles)

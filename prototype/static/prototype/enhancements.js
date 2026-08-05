@@ -1,6 +1,8 @@
 (() => {
   "use strict";
 
+  const FEATURE_PREFERENCES_KEY = "greenhouse-context-preferences-v1";
+  const savedFeaturePreferences = loadFeaturePreferences();
   const featureState = {
     workDate: "2026-08-05",
     shift: "Poranna · 06:00–14:00",
@@ -33,6 +35,19 @@
       materials: 4,
       reports: 5,
     },
+    ...savedFeaturePreferences,
+    listLimits: {
+      planning: 4,
+      attendance: 6,
+      tasks: 4,
+      productivity: 6,
+      team: 6,
+      crop: 5,
+      tickets: 5,
+      materials: 4,
+      reports: 5,
+      ...(savedFeaturePreferences.listLimits || {}),
+    },
   };
 
   const designState = loadDesignState();
@@ -40,6 +55,17 @@
   let context = null;
   let eventsBound = false;
   let lastScreen = null;
+
+  function loadFeaturePreferences() {
+    try { return JSON.parse(localStorage.getItem(FEATURE_PREFERENCES_KEY) || "{}"); }
+    catch (_) { return {}; }
+  }
+
+  function saveFeaturePreferences() {
+    const allowed = ["workDate", "shift", "scope", "attendanceFilter", "taskFilter", "productivityUnit", "teamFilter", "cropFilter", "listDensity", "listLimits"];
+    const snapshot = Object.fromEntries(allowed.map((key) => [key, featureState[key]]));
+    try { localStorage.setItem(FEATURE_PREFERENCES_KEY, JSON.stringify(snapshot)); } catch (_) { /* Preferences remain optional. */ }
+  }
 
   function loadDesignState() {
     try {
@@ -209,13 +235,27 @@
     return `${isToday ? "Dzisiaj" : "Plan na"} · ${formatted}`;
   }
 
+  const contextProfiles = {
+    dashboard: { object: "Obiekt", search: "Zadanie, problem lub obiekt…" },
+    planning: { object: "Obiekt planu", search: "Zadanie, brygadzista lub nawa…" },
+    attendance: { object: "Miejsce pracy", search: "Imię, nazwisko lub kod pracownika…" },
+    tasks: { object: "Obiekt realizacji", search: "Praca, wykonawca, nawa lub wózek…" },
+    productivity: { object: "Zakres wyników", search: "Pracownik, rodzaj pracy lub wynik…" },
+    team: { object: "Zakres zespołu", search: "Pracownik, kompetencja lub dokument…" },
+    crop: { object: "Etap szklarni", search: "Objaw, nawa lub osoba odpowiedzialna…" },
+    tickets: { object: "Obiekt zgłoszeń", search: "Problem, urządzenie, osoba lub numer…" },
+    materials: { object: "Miejsce wydania", search: "Materiał, symbol lub lokalizacja…" },
+    reports: { object: "Zakres raportu", search: "Pracownik, praca lub wyjątek…" },
+  };
+
   function contextBar() {
     const { state, companySites } = context;
     const manager = state.role === "Kierownik";
     const [shiftName, shiftHours = ""] = featureState.shift.split(" · ");
+    const profile = contextProfiles[state.screen] || contextProfiles.dashboard;
     const scopeControl = manager
-      ? `<label class="context-scope"><span>Obiekt</span><select data-module-change="scope"><option ${featureState.scope === "Wszystkie obiekty" ? "selected" : ""}>Wszystkie obiekty</option>${companySites.map((site) => `<option ${featureState.scope === site ? "selected" : ""}>${site}</option>`).join("")}</select></label>`
-      : `<div class="context-fixed context-scope"><span>Obiekt</span><b>${state.role === "Brygadzista" ? state.selectedSite : `Zakres: ${state.role}`}</b></div>`;
+      ? `<label class="context-scope"><span>${profile.object}</span><select data-module-change="scope"><option ${featureState.scope === "Wszystkie obiekty" ? "selected" : ""}>Wszystkie obiekty</option>${companySites.map((site) => `<option ${featureState.scope === site ? "selected" : ""}>${site}</option>`).join("")}</select></label>`
+      : `<div class="context-fixed context-scope"><span>${profile.object}</span><b>${state.role === "Brygadzista" ? state.selectedSite : `Zakres: ${state.role}`}</b><small>${state.role === "Brygadzista" ? "przypisano przez kierownika" : "zgodnie z uprawnieniami roli"}</small></div>`;
     return `<section class="operations-context surface" aria-label="Kontekst operacyjny">
       <header class="context-summary">
         <div class="context-title"><i></i><span><small>${contextDateLabel(featureState.workDate)}</small><b>${escapeHtml(shiftName)} <em>${escapeHtml(shiftHours)}</em></b></span></div>
@@ -224,14 +264,16 @@
           <div>
             <label><span>Data planu</span><input type="date" value="${featureState.workDate}" data-module-change="work-date"></label>
             <label><span>Zmiana</span><select data-module-change="shift"><option ${featureState.shift.startsWith("Poranna") ? "selected" : ""}>Poranna · 06:00–14:00</option><option ${featureState.shift.startsWith("Popołudniowa") ? "selected" : ""}>Popołudniowa · 14:00–22:00</option><option ${featureState.shift.startsWith("Nocna") ? "selected" : ""}>Nocna · 22:00–06:00</option></select></label>
+            <button type="button" class="context-current-shift" data-ux-action="current-shift">Ustaw bieżącą datę i zmianę</button>
           </div>
         </details>
-        <div class="context-saved"><i>✓</i><span><b>Zapisano</b><small>przed chwilą</small></span></div>
+        <div class="context-saved" data-context-save-state="saved" role="status"><i>✓</i><span><b>Zapis automatyczny</b><small>wszystkie zmiany zapisane</small></span></div>
       </header>
       <div class="context-controls">
         ${scopeControl}
-        <label class="context-search"><span>Szukaj w tym widoku</span><input type="search" value="${escapeHtml(featureState.search)}" placeholder="Osoba, zadanie lub nawa…" data-module-search><small class="context-search-count"></small></label>
+        <label class="context-search"><span>Szukaj w tym widoku</span><input type="search" value="${escapeHtml(featureState.search)}" placeholder="${profile.search}" data-module-search><small class="context-search-count"></small></label>
       </div>
+      <div class="context-active-row" data-context-active-row aria-live="polite"></div>
     </section>`;
   }
 
@@ -784,6 +826,7 @@
     const key = names[button.dataset.filterName];
     if (!key) return;
     featureState[key] = button.dataset.value;
+    saveFeaturePreferences();
     context.render();
   }
 
@@ -794,6 +837,7 @@
     if (action === "quick-nav") return navigate(button.dataset.target);
     if (action === "set-list-density") {
       featureState.listDensity = button.dataset.density === "comfortable" ? "comfortable" : "compact";
+      saveFeaturePreferences();
       render();
       return;
     }
@@ -804,6 +848,7 @@
       if (action === "show-more-list") featureState.listLimits[state.screen] = current + definition.step;
       if (action === "show-all-list") featureState.listLimits[state.screen] = Number.MAX_SAFE_INTEGER;
       if (action === "collapse-large-list") featureState.listLimits[state.screen] = definition.initial;
+      saveFeaturePreferences();
       applyListWindow();
       return;
     }
@@ -1054,12 +1099,14 @@
       if (control.dataset.moduleChange === "shift") featureState.shift = control.value;
       if (control.dataset.moduleChange === "scope") {
         featureState.scope = control.value;
+        saveFeaturePreferences();
         if (context.state.screen === "planning" && context.state.role === "Kierownik" && control.value !== "Wszystkie obiekty") {
           context.state.selectedPlanSite = control.value;
           context.render();
           return;
         }
       }
+      saveFeaturePreferences();
       applyFilters();
     });
   }
