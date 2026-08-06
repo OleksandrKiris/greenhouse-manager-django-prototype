@@ -480,6 +480,8 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn("function employeeNameLink(employee)", enhancements)
         self.assertIn("function employeeNumberLabel(employee)", enhancements)
         self.assertIn("function employeeLanguageChip(employee)", enhancements)
+        self.assertIn("function enhanceEmployeeProfileContact()", enhancements)
+        self.assertIn('href="tel:${phoneHref}"', enhancements)
         self.assertIn("${employeeNameLink(employee)}", enhancements)
         for marker in [
             ".employee-name-link",
@@ -487,6 +489,7 @@ class PrototypePageTests(SimpleTestCase):
             ".employee-number-label",
             ".employee-language-chip",
             ".employee-profile-modal",
+            ".employee-contact-card",
             ".employee-language",
             ".employee-current-assignment",
             ".employee-permission-note",

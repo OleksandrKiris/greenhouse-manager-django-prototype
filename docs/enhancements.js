@@ -605,6 +605,16 @@
     });
   }
 
+  function enhanceEmployeeProfileContact() {
+    const modal = context.app.querySelector(".employee-profile-modal");
+    if (!modal || modal.querySelector(".employee-contact-card")) return;
+    const employee = context.state.employees.find((item) => item.id === context.state.selectedEmployee);
+    const anchor = modal.querySelector(".employee-profile-columns");
+    if (!employee?.phone || !anchor) return;
+    const phoneHref = employee.phone.replace(/[^+\d]/g, "");
+    anchor.insertAdjacentHTML("afterend", `<section class="employee-contact-card"><div><i>☎</i><span><small>TELEFON PRACOWNIKA</small><a href="tel:${phoneHref}">${escapeHtml(employee.phone)}</a><em>Numer kontaktowy widoczny w karcie, bez zajmowania miejsca na liście.</em></span></div><a class="primary" href="tel:${phoneHref}" aria-label="Zadzwoń do: ${escapeHtml(employee.name)}">Zadzwoń</a></section>`);
+  }
+
   function downtimeContextPanel() {
     const records = Object.entries(featureState.pauseReasons).map(([taskId, reason]) => ({ task: context.state.tasks.find((item) => item.id === Number(taskId)), ...reason })).filter((item) => item.task);
     const grouped = records.reduce((result, item) => { result[item.reason] = (result[item.reason] || 0) + 1; return result; }, {});
@@ -1178,6 +1188,7 @@
     enhanceTaskAssignmentForm();
     enhanceLocationForms();
     enhanceTaskCards();
+    enhanceEmployeeProfileContact();
     decorateReviewBlocks();
     renderLargeListControls();
     applyFilters();

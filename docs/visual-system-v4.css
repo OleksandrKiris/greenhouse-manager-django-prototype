@@ -1515,6 +1515,17 @@ html { background: var(--v4-canvas); }
 .visual-system-v4 .employee-profile-columns > section > small { display: block; }
 .visual-system-v4 .employee-profile-columns > section > b { font-size: 11px; }
 .visual-system-v4 .employee-profile-columns > section > small { margin-top: 7px; color: var(--v4-muted); font-size: 9px; }
+.visual-system-v4 .employee-contact-card { padding: 10px 11px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--v4-green-50); border: 1px solid #bfdcc9; border-radius: 10px; }
+.visual-system-v4 .employee-contact-card > div { min-width: 0; display: flex; align-items: center; gap: 9px; }
+.visual-system-v4 .employee-contact-card > div > i { flex: 0 0 36px; height: 36px; display: grid; place-items: center; color: #fff; background: var(--v4-green-800); border-radius: 10px; font-size: 14px; font-style: normal; }
+.visual-system-v4 .employee-contact-card small,
+.visual-system-v4 .employee-contact-card a,
+.visual-system-v4 .employee-contact-card em { display: block; }
+.visual-system-v4 .employee-contact-card small { color: var(--v4-muted); font-size: 7px; font-weight: 900; letter-spacing: .05em; }
+.visual-system-v4 .employee-contact-card > div a { margin-top: 2px; color: var(--v4-green-900); font-size: 13px; font-weight: 900; text-decoration: none; }
+.visual-system-v4 .employee-contact-card > div a:hover { text-decoration: underline; }
+.visual-system-v4 .employee-contact-card em { margin-top: 2px; color: var(--v4-muted); font-size: 8px; font-style: normal; }
+.visual-system-v4 .employee-contact-card > .primary { flex: 0 0 auto; min-height: 38px; display: inline-flex; align-items: center; text-decoration: none; }
 .visual-system-v4 .employee-hr-data { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .visual-system-v4 .employee-hr-data > span { padding: 10px 11px; background: #fff9eb; border: 1px solid #ead8ad; border-radius: 10px; }
 .visual-system-v4 .employee-hr-data small,
@@ -1897,6 +1908,8 @@ html { background: var(--v4-canvas); }
   .visual-system-v4 .employee-profile-facts > span { min-height: 58px; padding: 8px; }
   .visual-system-v4 .employee-current-assignment > div { grid-template-columns: 1fr 1fr; }
   .visual-system-v4 .employee-current-assignment > div > span:last-child { grid-column: 1 / -1; }
+  .visual-system-v4 .employee-contact-card { align-items: stretch; flex-direction: column; }
+  .visual-system-v4 .employee-contact-card > .primary { width: 100%; justify-content: center; }
   .visual-system-v4 .employee-hr-data { grid-template-columns: 1fr; }
 }
 
