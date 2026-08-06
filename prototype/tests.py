@@ -370,11 +370,30 @@ class PrototypePageTests(SimpleTestCase):
         enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
         styles = (static_dir / "visual-system-v4.css").read_text(encoding="utf-8")
         visual_script = (static_dir / "visual-system-v4.js").read_text(encoding="utf-8")
-        for marker in ["contextDateLabel", "context-summary", "context-schedule", "context-controls", "Zapisano", "Szukaj w tym widoku"]:
+        for marker in ["contextDateLabel", "context-summary", "context-schedule", "context-controls", "Zapisano", "Szukaj"]:
             self.assertIn(marker, enhancements)
         for marker in [".context-summary", ".context-schedule", ".context-controls", ".v4-context-search-icon"]:
             self.assertIn(marker, styles)
         self.assertIn("decorateContextBar", visual_script)
+
+    def test_one_task_interface_hides_advanced_navigation_and_settings(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        app_script = (static_dir / "app.js").read_text(encoding="utf-8")
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        hydra = (static_dir / "hydra-features.js").read_text(encoding="utf-8")
+        ux = (static_dir / "ux-v3.js").read_text(encoding="utf-8")
+        styles = (static_dir / "visual-system-v4.css").read_text(encoding="utf-8")
+        self.assertIn("ZARZĄDZANIE ZMIANĄ", app_script)
+        self.assertIn('details class="role-switch"', app_script)
+        self.assertNotIn("GREENHOUSE MANAGER · DJANGO", app_script)
+        for marker in ["function collapseSecondaryInformation()", "v9-simple-context", "v9-module-details"]:
+            self.assertIn(marker, enhancements)
+        for marker in ["v9-system-controls", "v9-system-menu", "Pokaż także historię"]:
+            self.assertIn(marker, hydra)
+        for marker in ["function simpleNavigation()", "v9-nav-more", "v9-one-task-ui"]:
+            self.assertIn(marker, ux)
+        for marker in [".v9-nav-more", ".v9-system-menu", ".v9-simple-context", ".v9-module-details"]:
+            self.assertIn(marker, styles)
 
     def test_context_is_module_specific_filterable_and_reports_real_save_state(self):
         static_dir = Path(__file__).parent / "static" / "prototype"

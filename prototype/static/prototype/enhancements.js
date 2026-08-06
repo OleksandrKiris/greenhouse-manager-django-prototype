@@ -270,12 +270,13 @@
   function contextBar() {
     const { state, companySites } = context;
     const manager = state.role === "Kierownik";
+    const searchable = state.screen !== "dashboard";
     const [shiftName, shiftHours = ""] = featureState.shift.split(" · ");
     const profile = contextProfiles[state.screen] || contextProfiles.dashboard;
     const scopeControl = manager
       ? `<label class="context-scope"><span>${profile.object}</span><select data-module-change="scope"><option ${featureState.scope === "Wszystkie obiekty" ? "selected" : ""}>Wszystkie obiekty</option>${companySites.map((site) => `<option ${featureState.scope === site ? "selected" : ""}>${site}</option>`).join("")}</select></label>`
-      : `<div class="context-fixed context-scope"><span>${profile.object}</span><b>${state.role === "Brygadzista" ? state.selectedSite : `Zakres: ${state.role}`}</b><small>${state.role === "Brygadzista" ? "przypisano przez kierownika" : "zgodnie z uprawnieniami roli"}</small></div>`;
-    return `<section class="operations-context surface" aria-label="Kontekst operacyjny">
+      : `<div class="context-fixed context-scope"><span>${profile.object}</span><b>${state.role === "Brygadzista" ? state.selectedSite : state.role}</b></div>`;
+    return `<section class="operations-context v9-simple-context surface" aria-label="Kontekst pracy">
       <header class="context-summary">
         <div class="context-title"><i></i><span><small>${contextDateLabel(featureState.workDate)}</small><b>${escapeHtml(shiftName)} <em>${escapeHtml(shiftHours)}</em></b></span></div>
         <details class="context-schedule">
@@ -286,11 +287,11 @@
             <button type="button" class="context-current-shift" data-ux-action="current-shift">Ustaw bieżącą datę i zmianę</button>
           </div>
         </details>
-        <div class="context-saved" data-context-save-state="saved" role="status"><i>✓</i><span><b>Zapis automatyczny</b><small>wszystkie zmiany zapisane</small></span></div>
+        <div class="context-saved" data-context-save-state="saved" role="status"><i>✓</i><span><b>Zapisano</b></span></div>
       </header>
       <div class="context-controls">
         ${scopeControl}
-        <label class="context-search"><span>Szukaj w tym widoku</span><input type="search" value="${escapeHtml(featureState.search)}" placeholder="${profile.search}" data-module-search><small class="context-search-count"></small></label>
+        ${searchable ? `<label class="context-search"><span>Szukaj</span><input type="search" value="${escapeHtml(featureState.search)}" placeholder="${profile.search}" data-module-search><small class="context-search-count"></small></label>` : ""}
       </div>
       <div class="context-active-row" data-context-active-row aria-live="polite"></div>
     </section>`;
@@ -752,6 +753,18 @@
     context.app.classList.add("v8-simple-mode");
   }
 
+  function collapseSecondaryInformation() {
+    const panel = context.app.querySelector(".module-upgrade");
+    if (!panel) return;
+    const secondary = Array.from(panel.querySelectorAll(":scope > .upgrade-metrics, :scope > .publication-checklist, :scope > .forecast-list, :scope > .report-readiness"));
+    if (!secondary.length) return;
+    const details = document.createElement("details");
+    details.className = "v9-module-details";
+    details.innerHTML = `<summary><span><b>Podsumowanie i kontrola</b><small>${secondary.length === 1 ? "1 sekcja" : `${secondary.length} sekcje`}</small></span><em>Rozwiń</em></summary><div></div>`;
+    secondary[0].before(details);
+    secondary.forEach((element) => details.querySelector("div").append(element));
+  }
+
   function simplifyDashboard() {
     if (context.state.screen !== "dashboard") return;
     context.app.querySelectorAll(".content > .scope-strip, .content > .hero, .content > .metrics, .content > .two-col").forEach((element) => element.remove());
@@ -1208,6 +1221,7 @@
     const secondaryDashboard = context.state.screen === "dashboard" ? dashboardSecondaryDetails() : "";
     pageHead.insertAdjacentHTML("afterend", `${contextBar()}${guidance}${designStudioPanel()}${modulePanel()}${secondaryDashboard}`);
     context.app.insertAdjacentHTML("beforeend", pauseReasonModal());
+    collapseSecondaryInformation();
     applyRolePermissions();
     renderFlexibleAttendance();
     simplifyDashboard();

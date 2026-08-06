@@ -96,15 +96,15 @@
     const activeModule = context.app.querySelector('.nav button.active span')?.textContent.trim() || "Podsumowanie";
     const shiftInfo = context.app.querySelector(".shift-info");
     if (shiftInfo) shiftInfo.innerHTML = `<span>AKTUALNY WIDOK</span><b>${activeModule} · ${context.state.role}</b>`;
-    if (!actions.querySelector("[data-v4-action='greenhouse-mode']")) {
-      const review = actions.querySelector(".review-toggle");
+    if (!context.app.querySelector("[data-v4-action='greenhouse-mode']")) {
+      const menu = context.app.querySelector(".v9-system-menu > div");
       const toggle = document.createElement("button");
       toggle.type = "button";
-      toggle.className = "v4-display-toggle";
+      toggle.className = "v4-display-toggle hydra-tool";
       toggle.dataset.v4Action = "greenhouse-mode";
       toggle.title = "Większy kontrast i elementy dotykowe do pracy w szklarni";
       toggle.innerHTML = `${icon("sun-medium")}<span>Tryb szklarni</span>`;
-      actions.insertBefore(toggle, review || null);
+      (menu || actions).append(toggle);
     }
 
     const current = actions.querySelector(".current-view-toggle");
@@ -122,7 +122,7 @@
     const review = actions.querySelector(".review-toggle");
     if (review) review.innerHTML = `${icon("eye")}<span>Oceń makietę</span>`;
 
-    const modeToggle = actions.querySelector("[data-v4-action='greenhouse-mode']");
+    const modeToggle = context.app.querySelector("[data-v4-action='greenhouse-mode']");
     if (modeToggle) {
       modeToggle.classList.toggle("active", preferences.greenhouseMode);
       modeToggle.setAttribute("aria-pressed", String(preferences.greenhouseMode));

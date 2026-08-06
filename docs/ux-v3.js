@@ -105,6 +105,26 @@
     });
   }
 
+  function simpleNavigation() {
+    const nav = context.app.querySelector(".sidebar .nav");
+    if (!nav) return;
+    const primaryByRole = {
+      Brygadzista: ["dashboard", "planning", "attendance", "tasks", "tickets"],
+      Kierownik: ["dashboard", "planning", "tasks", "tickets", "reports"],
+    };
+    const primary = primaryByRole[context.state.role];
+    if (!primary) return;
+    const secondary = Array.from(nav.querySelectorAll(":scope > button[data-nav]")).filter((button) => !primary.includes(button.dataset.nav));
+    if (!secondary.length) return;
+    const details = document.createElement("details");
+    details.className = "v9-nav-more";
+    details.open = secondary.some((button) => button.classList.contains("active"));
+    details.innerHTML = `<summary><i>＋</i><span>Więcej</span><small>${secondary.length}</small></summary><div></div>`;
+    const container = details.querySelector("div");
+    secondary.forEach((button) => container.append(button));
+    nav.append(details);
+  }
+
   function availableForemen() {
     const site = context.state.role === "Brygadzista" ? context.state.selectedSite : null;
     return [...new Set(context.state.plan
@@ -155,7 +175,7 @@
 
     row.innerHTML = chips.length
       ? `<span class="context-active-label">Aktywne filtry</span><div class="context-chips">${chips.map(([id, label, value]) => `<button type="button" data-ux-action="clear-context-${id}" title="Usuń filtr: ${escapeHtml(label)} ${escapeHtml(value)}"><small>${escapeHtml(label)}</small><b>${escapeHtml(value)}</b><i aria-hidden="true">×</i></button>`).join("")}</div><button type="button" class="context-clear-all" data-ux-action="clear-context-all">Wyczyść wszystko</button>`
-      : `<span class="context-no-filters"><i aria-hidden="true">✓</i> Brak dodatkowych filtrów · pokazujemy domyślny zakres tego modułu</span>`;
+      : "";
     row.classList.toggle("has-filters", Boolean(chips.length));
 
     const menu = context.app.querySelector(".ux-filter-menu");
@@ -169,9 +189,8 @@
     if (!bar || !search) return;
     const foremen = availableForemen();
     if (!foremen.includes(ux.brigade)) ux.brigade = "Wszystkie brygady";
-    search.insertAdjacentHTML("beforebegin", moduleContextControl(foremen));
-    const saved = ux.savedFilters[context.state.screen];
-    search.insertAdjacentHTML("beforeend", `<details class="ux-filter-menu"><summary aria-label="Szybkie filtry">Filtry</summary><div>${issueSearch[context.state.screen] ? `<button type="button" data-ux-action="filter-issues">Tylko wymagające uwagi</button>` : ""}<button type="button" data-ux-action="filter-reset">Wyczyść filtry</button><button type="button" data-ux-action="filter-save">Zapisz obecny filtr</button>${saved ? `<button type="button" data-ux-action="filter-apply">Zastosuj „Mój filtr”</button>` : ""}</div></details>`);
+    if (["planning", "tasks"].includes(context.state.screen)) search.insertAdjacentHTML("beforebegin", moduleContextControl(foremen));
+    search.insertAdjacentHTML("beforeend", `<details class="ux-filter-menu"><summary aria-label="Szybkie filtry">Filtry</summary><div>${issueSearch[context.state.screen] ? `<button type="button" data-ux-action="filter-issues">Tylko wymagające uwagi</button>` : ""}<button type="button" data-ux-action="filter-reset">Wyczyść</button></div></details>`);
     renderContextChips();
   }
 
@@ -526,7 +545,8 @@
       ux.ticketStep = 0;
       return;
     }
-    groupNavigation();
+    context.app.classList.add("v9-one-task-ui");
+    simpleNavigation();
     enhanceContextBar();
     attendanceCommandCenter();
     planExecutionPanel();

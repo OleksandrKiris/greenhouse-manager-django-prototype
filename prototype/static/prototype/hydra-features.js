@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "2026.08.06.5";
+  const VERSION = "2026.08.06.6";
   const STORAGE_KEY = "greenhouse-hydra-settings-v1";
   const PENDING_KEY = "greenhouse-offline-queue-v1";
   const languages = {
@@ -102,12 +102,16 @@
 
   function systemControls() {
     const copy = text();
-    return `<div class="hydra-system-controls">
-      <label class="hydra-language"><span>${copy.language}</span><select data-hydra-change="language" aria-label="${copy.language}">${languageOptions()}</select></label>
-      <button class="hydra-tool" data-hydra-action="open-guide"><i>?</i><span>${copy.guide}</span></button>
-      <button class="hydra-tool" data-hydra-action="install"><i>⇩</i><span>${copy.install}</span></button>
+    return `<div class="hydra-system-controls v9-system-controls">
       <span class="hydra-sync ${navigator.onLine ? "online" : "offline"}" role="status"><i></i><span>${syncLabel()}</span></span>
-      <button class="hydra-version" data-hydra-action="version" title="${copy.version} ${VERSION}">v${VERSION}</button>
+      <details class="v9-system-menu"><summary aria-label="Otwórz ustawienia"><i>⋯</i><span>Ustawienia</span></summary><div>
+        <label class="hydra-language"><span>${copy.language}</span><select data-hydra-change="language" aria-label="${copy.language}">${languageOptions()}</select></label>
+        <button type="button" class="hydra-tool v9-history-toggle" data-action="toggle-current"><i>◷</i><span>${context.state.currentOnly ? "Pokaż także historię" : "Pokaż tylko aktualne"}</span></button>
+        <button type="button" class="hydra-tool" data-hydra-action="open-guide"><i>?</i><span>${copy.guide}</span></button>
+        <button type="button" class="hydra-tool" data-hydra-action="install"><i>⇩</i><span>${copy.install}</span></button>
+        <button type="button" class="hydra-tool" data-action="toggle-review"><i>◇</i><span>${copy.review}</span></button>
+        <button type="button" class="hydra-version" data-hydra-action="version" title="${copy.version} ${VERSION}">v${VERSION}</button>
+      </div></details>
     </div>`;
   }
 
