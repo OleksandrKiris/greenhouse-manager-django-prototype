@@ -459,3 +459,29 @@ class PrototypePageTests(SimpleTestCase):
             ".v7-handover-accept",
         ]:
             self.assertIn(marker, styles)
+
+    def test_employee_names_open_compact_role_aware_employee_cards(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        app_script = (static_dir / "app.js").read_text(encoding="utf-8")
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        styles = (static_dir / "visual-system-v4.css").read_text(encoding="utf-8")
+        for marker in [
+            "function employeeNameLink(employee)",
+            'aria-haspopup="dialog"',
+            "employeeCurrentTask",
+            "employee-profile-modal",
+            "Preferowany język komunikacji",
+            "canSeeHr",
+            "Dane kadrowe i dokumenty są dostępne wyłącznie dla uprawnionych ról",
+        ]:
+            self.assertIn(marker, app_script)
+        self.assertIn("function employeeNameLink(employee)", enhancements)
+        self.assertIn("${employeeNameLink(employee)}", enhancements)
+        for marker in [
+            ".employee-name-link",
+            ".employee-profile-modal",
+            ".employee-language",
+            ".employee-current-assignment",
+            ".employee-permission-note",
+        ]:
+            self.assertIn(marker, styles)
