@@ -316,6 +316,19 @@
     </section>`;
   }
 
+  function simpleGuidancePanel() {
+    const profile = roleProfiles[context.state.role];
+    const definition = screenDefinitions[context.state.screen];
+    if (!profile || !definition) return "";
+    return `<details class="v8-screen-help surface">
+      <summary><span><i>?</i><b>Jak działa ten ekran?</b></span><em>Rozwiń</em></summary>
+      <div class="v8-screen-help-body">
+        <section><small>NA TYM EKRANIE</small><b>${escapeHtml(definition.title)}</b><p>${escapeHtml(definition.purpose)}</p><div>${definition.owns.map((item) => `<span>✓ ${escapeHtml(item)}</span>`).join("")}</div></section>
+        <section><small>TWOJE UPRAWNIENIA</small><b>${escapeHtml(profile.title)}</b><div>${profile.rights.map((right) => `<span>✓ ${escapeHtml(right)}</span>`).join("")}</div><p class="v8-screen-limit"><i>i</i>${escapeHtml(profile.restriction)}</p></section>
+      </div>
+    </details>`;
+  }
+
   function workflowPanel() {
     const { state } = context;
     const unsettled = state.employees.filter((employee) => employee.status === "Nieustalony").length;
@@ -719,11 +732,24 @@
       "Dział techniczny": `${startMetric(openTickets().length, "aktywnych zgłoszeń")}${startMetric(critical, "krytycznych", critical ? "danger" : "")}${startMetric(ticketQueued, "bez technika", ticketQueued ? "warn" : "")}${startMetric(openTickets().filter((ticket) => ticket.status === "W realizacji").length, "w realizacji")}`,
       Kadry: `${startMetric(present, "obecnych")}${startMetric(unsettled, "nieustalonych", unsettled ? "danger" : "")}${startMetric(state.employees.filter((employee) => employee.status === "Obecny" && employee.breaks?.length === 2).length, "z dwiema przerwami")}${startMetric(`${Math.floor(state.employees.reduce((sum, employee) => sum + employeeNetMinutes(employee), 0) / 60)} h`, "czasu netto")}`,
     };
-    return `<section class="hydra-start-panel">
-      <header><div><span class="kicker">PANEL STARTOWY · ${escapeHtml(state.role)}</span><h2>Najpierw wybierz, czego potrzebujesz</h2><p>Najważniejsza czynność jest zawsze pierwsza. Pozostałe informacje otworzysz dopiero wtedy, gdy będą potrzebne.</p></div><span class="hydra-live"><i></i> ${state.currentOnly ? "Tylko aktualne" : "Aktualne i historia"}</span></header>
-      <div class="hydra-action-grid">${cards.map(([tone, label, title, copy, target, buttonLabel], index) => `<article class="hydra-action-card ${tone}"><i class="hydra-card-number">${String(index + 1).padStart(2, "0")}</i><div><span>${label}</span><h3>${title}</h3><p>${copy}</p><button class="${tone === "priority" ? "primary" : "secondary"}" data-module-action="quick-nav" data-target="${target}">${buttonLabel} <b>→</b></button></div></article>`).join("")}</div>
-      <footer>${footerByRole[state.role]}</footer>
+    const renderStartCard = ([tone, label, title, copy, target, buttonLabel], index) => `<article class="hydra-action-card ${tone}"><i class="hydra-card-number">${String(index + 1).padStart(2, "0")}</i><div><span>${label}</span><h3>${title}</h3><p>${copy}</p><button class="${tone === "priority" ? "primary" : "secondary"}" data-module-action="quick-nav" data-target="${target}">${buttonLabel} <b>→</b></button></div></article>`;
+    return `<section class="hydra-start-panel v8-simple-start">
+      <header><div><span class="kicker">TERAZ · ${escapeHtml(state.role)}</span><h2>Najważniejsze zadanie</h2></div><span class="hydra-live"><i></i> ${state.currentOnly ? "Tylko aktualne" : "Aktualne i historia"}</span></header>
+      <div class="hydra-action-grid v8-primary-action">${renderStartCard(cards[0], 0)}</div>
+      <details class="v8-more-actions"><summary><span><b>Inne zadania na tej zmianie</b><small>${cards.length - 1} dostępne</small></span><em>Rozwiń</em></summary><div class="hydra-action-grid">${cards.slice(1).map((card, index) => renderStartCard(card, index + 1)).join("")}</div></details>
+      <details class="v8-shift-numbers"><summary><span><b>Liczby bieżącej zmiany</b><small>Podsumowanie bez otwierania raportu</small></span><em>Rozwiń</em></summary><footer>${footerByRole[state.role]}</footer></details>
     </section>`;
+  }
+
+  function dashboardSecondaryDetails() {
+    return `<details class="v8-dashboard-details surface">
+      <summary><span><i>⋯</i><b>Więcej informacji o zmianie</b><small>Przebieg, odpowiedzialność i wyjątki</small></span><em>Rozwiń</em></summary>
+      <div>${workflowPanel()}${chiefForemanPanel()}${exceptionCenterPanel()}</div>
+    </details>`;
+  }
+
+  function simplifyEverydayView() {
+    context.app.classList.add("v8-simple-mode");
   }
 
   function simplifyDashboard() {
@@ -997,16 +1023,15 @@
   function renderLargeListControls() {
     const definition = largeListDefinitions[context.state.screen];
     const shell = context.app.querySelector(".shell");
-    shell?.classList.toggle("compact-lists", featureState.listDensity === "compact");
+    shell?.classList.add("compact-lists");
     if (!definition) return;
     const anchor = context.app.querySelector(definition.anchor);
     const total = context.app.querySelectorAll(definition.item).length;
     if (!anchor || !total) return;
     anchor.classList.add("large-list-target");
     anchor.dataset.listScreen = context.state.screen;
-    anchor.insertAdjacentHTML("beforebegin", `<section class="large-list-toolbar surface" aria-label="Sterowanie dużą listą">
-      <div class="large-list-summary"><i>≡</i><span><small>DUŻA LISTA · ${escapeHtml(screenDefinitions[context.state.screen]?.title || "REJESTR")}</small><b data-large-list-count aria-live="polite">Pokazano 0 z ${total}</b><p>Najpierw widzisz krótki zestaw; filtry i wyszukiwanie obejmują całą listę.</p></span></div>
-      <div class="list-density" role="group" aria-label="Gęstość listy"><button class="${featureState.listDensity === "compact" ? "active" : ""}" data-module-action="set-list-density" data-density="compact">Kompaktowo</button><button class="${featureState.listDensity === "comfortable" ? "active" : ""}" data-module-action="set-list-density" data-density="comfortable">Wygodnie</button></div>
+    anchor.insertAdjacentHTML("beforebegin", `<section class="large-list-toolbar v8-simple-list-tools surface" aria-label="Sterowanie listą">
+      <div class="large-list-summary"><i>≡</i><span><small>LISTA · ${escapeHtml(screenDefinitions[context.state.screen]?.title || "REJESTR")}</small><b data-large-list-count aria-live="polite">0 z ${total}</b></span></div>
       <div class="large-list-actions"><button class="secondary" data-module-action="collapse-large-list">Zwiń</button><button class="secondary" data-module-action="show-more-list">Pokaż kolejne ${definition.step}</button><button class="primary" data-module-action="show-all-list">Pokaż wszystko</button></div>
     </section>`);
   }
@@ -1022,7 +1047,7 @@
     const toolbar = context.app.querySelector(".large-list-toolbar");
     if (!toolbar) return;
     const counter = toolbar.querySelector("[data-large-list-count]");
-    if (counter) counter.textContent = `Pokazano ${visible} z ${matching.length} ${definition.label}`;
+    if (counter) counter.textContent = `${visible} z ${matching.length} ${definition.label}`;
     const more = toolbar.querySelector('[data-module-action="show-more-list"]');
     const all = toolbar.querySelector('[data-module-action="show-all-list"]');
     const collapse = toolbar.querySelector('[data-module-action="collapse-large-list"]');
@@ -1176,11 +1201,12 @@
       return;
     }
     ensureTimeProfiles();
+    simplifyEverydayView();
     const pageHead = context.app.querySelector(".content > .page-head");
     if (!pageHead) return;
-    const guidance = context.state.screen === "dashboard" ? roleFocusPanel() : screenScopePanel();
-    const operationalDashboard = context.state.screen === "dashboard" ? `${workflowPanel()}${chiefForemanPanel()}${exceptionCenterPanel()}` : "";
-    pageHead.insertAdjacentHTML("afterend", `${contextBar()}${guidance}${operationalDashboard}${designStudioPanel()}${modulePanel()}`);
+    const guidance = simpleGuidancePanel();
+    const secondaryDashboard = context.state.screen === "dashboard" ? dashboardSecondaryDetails() : "";
+    pageHead.insertAdjacentHTML("afterend", `${contextBar()}${guidance}${designStudioPanel()}${modulePanel()}${secondaryDashboard}`);
     context.app.insertAdjacentHTML("beforeend", pauseReasonModal());
     applyRolePermissions();
     renderFlexibleAttendance();

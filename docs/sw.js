@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "greenhouse-manager-";
-const CACHE_NAME = `${CACHE_PREFIX}2026-08-06-04`;
+const CACHE_NAME = `${CACHE_PREFIX}2026-08-06-05`;
 const SHARED_ASSETS = [
   "styles.css",
   "planning.css",

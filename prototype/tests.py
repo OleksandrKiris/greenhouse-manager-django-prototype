@@ -214,7 +214,8 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn("const screenDefinitions", enhancements)
         self.assertIn("function screenScopePanel()", enhancements)
         self.assertIn('TEN WIDOK ZAWIERA TYLKO', enhancements)
-        self.assertIn('? roleFocusPanel() : screenScopePanel()', enhancements)
+        self.assertIn("function simpleGuidancePanel()", enhancements)
+        self.assertIn("const guidance = simpleGuidancePanel();", enhancements)
         self.assertIn("module-scope", styles)
         for screen in self.pages.values():
             if screen != "login":
@@ -236,7 +237,8 @@ class PrototypePageTests(SimpleTestCase):
         enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
         styles = (static_dir / "enhancements.css").read_text(encoding="utf-8")
         self.assertIn("hydra-start-panel", enhancements)
-        self.assertIn("Najpierw wybierz, czego potrzebujesz", enhancements)
+        self.assertIn("Najważniejsze zadanie", enhancements)
+        self.assertIn("Inne zadania na tej zmianie", enhancements)
         self.assertIn("function simplifyDashboard()", enhancements)
         self.assertIn("hydra-action-grid", styles)
         self.assertIn("System wizualny inspirowany CITRONEX Hydra", styles)
@@ -276,6 +278,23 @@ class PrototypePageTests(SimpleTestCase):
         self.assertIn("large-list-toolbar", styles)
         self.assertIn("compact-lists", styles)
         self.assertIn("position: static", styles)
+
+    def test_everyday_view_keeps_primary_action_visible_and_details_optional(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        enhancements = (static_dir / "enhancements.js").read_text(encoding="utf-8")
+        styles = (static_dir / "visual-system-v4.css").read_text(encoding="utf-8")
+        for marker in [
+            "function simpleGuidancePanel()",
+            "function dashboardSecondaryDetails()",
+            "function simplifyEverydayView()",
+            "Jak działa ten ekran?",
+            "Najważniejsze zadanie",
+            "Inne zadania na tej zmianie",
+            "v8-simple-list-tools",
+        ]:
+            self.assertIn(marker, enhancements)
+        for marker in [".v8-screen-help", ".v8-simple-start", ".v8-dashboard-details", ".v8-simple-list-tools"]:
+            self.assertIn(marker, styles)
 
     def test_hydra_features_add_languages_voice_offline_and_mobile_installation(self):
         static_dir = Path(__file__).parent / "static" / "prototype"
