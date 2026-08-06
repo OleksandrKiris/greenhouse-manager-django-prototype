@@ -165,6 +165,10 @@
     return `<button type="button" class="employee-name-link" data-action="employee-detail" data-id="${employee.id}" aria-haspopup="dialog" aria-label="Otwórz kartę pracownika: ${escapeHtml(employee.name)}" title="Otwórz kartę pracownika">${escapeHtml(employee.name)}</button>`;
   }
 
+  function employeeLanguageChip(employee) {
+    return `<span class="employee-language-chip" title="Preferowany język komunikacji: ${escapeHtml(employee.language)}" aria-label="Preferowany język komunikacji: ${escapeHtml(employee.language)}"><b>${escapeHtml(employee.languageCode)}</b><em>${escapeHtml(employee.language)}</em></span>`;
+  }
+
   const activePlan = () => {
     const { state } = context;
     const site = state.role === "Kierownik" ? state.selectedPlanSite : state.role === "Brygadzista" ? state.selectedSite : null;
@@ -905,7 +909,7 @@
         const gross = present ? net + accounting.deducted : 0;
         const expanded = featureState.expandedTimeCards.includes(employee.id) || employee.status === "Nieustalony";
         return `<details class="time-worker-card ${present ? "" : "inactive"}" data-time-card-id="${employee.id}" ${expanded ? "open" : ""}>
-          <summary><span class="person"><i class="avatar">${employee.name.split(" ").map((part) => part[0]).join("").slice(0, 2)}</i><span>${employeeNameLink(employee)}<small>${employee.code}</small></span></span><span class="time-worker-summary"><em>${employee.status}</em><span class="time-range"><small>Godziny</small><b>${present ? `${employee.start}–${employee.end}` : "—"}</b></span><span class="time-break-summary"><small>Przerwy</small><b>${present ? `${accounting.total} min · ${accounting.paid} płatne` : "—"}</b></span><strong>${present ? `${formatMinutes(net)} netto` : "Brak godzin"}</strong><i class="time-chevron">⌄</i></span></summary>
+          <summary><span class="person"><i class="avatar">${employee.name.split(" ").map((part) => part[0]).join("").slice(0, 2)}</i><span>${employeeNameLink(employee)}<span class="employee-identity-meta"><small>${employee.code}</small>${employeeLanguageChip(employee)}</span></span></span><span class="time-worker-summary"><em>${employee.status}</em><span class="time-range"><small>Godziny</small><b>${present ? `${employee.start}–${employee.end}` : "—"}</b></span><span class="time-break-summary"><small>Przerwy</small><b>${present ? `${accounting.total} min · ${accounting.paid} płatne` : "—"}</b></span><strong>${present ? `${formatMinutes(net)} netto` : "Brak godzin"}</strong><i class="time-chevron">⌄</i></span></summary>
           <div class="time-worker-details"><div class="time-card-grid"><label><span>Status</span><select data-change="attendance" data-id="${employee.id}" aria-label="Status ${escapeHtml(employee.name)}">${["Obecny", "Urlop", "Zwolnienie", "Nieustalony"].map((status) => `<option ${employee.status === status ? "selected" : ""}>${status}</option>`).join("")}</select></label><label><span>Szablon</span><select data-time-template data-id="${employee.id}" ${present ? "" : "disabled"}><option value="custom">Indywidualnie</option><option value="early">05:45–14:00 · 1 przerwa</option><option value="double">06:00–14:30 · 2 przerwy</option><option value="late">07:00–15:30 · 1 przerwa</option></select></label><label><span>Start</span><input type="time" value="${present ? employee.start : ""}" data-time-field="start" data-id="${employee.id}" ${present ? "" : "disabled"}></label><label><span>Koniec</span><input type="time" value="${present ? employee.end : ""}" data-time-field="end" data-id="${employee.id}" ${present ? "" : "disabled"}></label><label><span>Liczba przerw</span><select data-break-count data-id="${employee.id}" ${present ? "" : "disabled"}><option value="1" ${breaks.length === 1 ? "selected" : ""}>1 przerwa</option><option value="2" ${breaks.length === 2 ? "selected" : ""}>2 przerwy</option></select></label></div>
           <div class="break-editor">${present ? breaks.map((item, index) => `<div><span><b>Przerwa ${index + 1}</b><small>${item.start} · ${item.minutes} min${index === 0 ? ` · ${accounting.paid} min płatne` : ""}</small></span><label><span>Od</span><input type="time" value="${item.start}" data-break-start data-break-index="${index}" data-id="${employee.id}"></label><label><span>Minuty</span><input type="number" min="5" max="90" step="5" value="${item.minutes}" data-break-minutes data-break-index="${index}" data-id="${employee.id}"></label></div>`).join("") : `<div class="break-empty">Przerwy nie są liczone przy statusie „${employee.status}”.</div>`}</div>
           <footer><label><span>Notatka do czasu pracy</span><input value="${escapeHtml(employee.timeNote || "")}" placeholder="np. późniejszy przyjazd" data-time-note data-id="${employee.id}"></label><div class="time-total"><span><small>Obecność</small><b>${present ? formatMinutes(gross) : "—"}</b></span><i>−</i><span><small>Do odliczenia</small><b>${present ? `${accounting.deducted} min` : "—"}</b></span><i>=</i><span class="net"><small>Do rozliczenia</small><b>${present ? formatMinutes(net) : "—"}</b></span></div></footer></div>
@@ -1044,6 +1048,7 @@
         const labels = Array.from(picker.querySelectorAll(":scope > label"));
         labels.forEach((label, index) => {
           const input = label.querySelector('input[name="employees"]');
+          const employee = context.state.employees.find((item) => item.name === input?.value);
           const assignments = resources.peopleAssignments.get(input?.value) || [];
           label.dataset.skill = skills[index % skills.length];
           label.dataset.activeAssignments = String(assignments.length);
@@ -1053,7 +1058,7 @@
             input.disabled = true;
             label.title = `Niedostępny: ${assignments.map((task) => task.title).join(" · ")}`;
           }
-          label.querySelector("span")?.insertAdjacentHTML("beforeend", `<span class="v5-person-state ${assignments.length ? "busy" : "free"}">${assignments.length ? `${assignments.length} aktywna praca` : "Dostępny"}</span><span class="v5-person-skill">${skills[index % skills.length]}</span>`);
+          label.querySelector("span")?.insertAdjacentHTML("beforeend", `${employee ? employeeLanguageChip(employee) : ""}<span class="v5-person-state ${assignments.length ? "busy" : "free"}">${assignments.length ? `${assignments.length} aktywna praca` : "Dostępny"}</span><span class="v5-person-skill">${skills[index % skills.length]}</span>`);
         });
         const availableInputs = labels.filter((label) => label.dataset.activeAssignments === "0").map((label) => label.querySelector('input[name="employees"]')).filter(Boolean);
         if (!availableInputs.some((input) => input.checked)) availableInputs.slice(0, 2).forEach((input) => { input.checked = true; });
@@ -1084,9 +1089,11 @@
       let firstFree = null;
       Array.from(select?.options || []).forEach((option) => {
         const employeeName = option.value;
+        const employee = context.state.employees.find((item) => item.name === employeeName);
+        const identity = employee ? `${employeeName} · ${employee.code} · ${employee.languageCode} ${employee.language}` : employeeName;
         option.value = employeeName;
         const assignments = resources.peopleAssignments.get(employeeName) || [];
-        option.textContent = assignments.length ? `${employeeName} — ${assignments.length} aktywna praca` : `${employeeName} — dostępny`;
+        option.textContent = assignments.length ? `${identity} — ${assignments.length} aktywna praca` : `${identity} — dostępny`;
         option.disabled = assignments.length > 0;
         if (!assignments.length && !firstFree) firstFree = option;
       });

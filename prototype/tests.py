@@ -467,6 +467,7 @@ class PrototypePageTests(SimpleTestCase):
         styles = (static_dir / "visual-system-v4.css").read_text(encoding="utf-8")
         for marker in [
             "function employeeNameLink(employee)",
+            "function employeeLanguageChip(employee)",
             'aria-haspopup="dialog"',
             "employeeCurrentTask",
             "employee-profile-modal",
@@ -476,9 +477,12 @@ class PrototypePageTests(SimpleTestCase):
         ]:
             self.assertIn(marker, app_script)
         self.assertIn("function employeeNameLink(employee)", enhancements)
+        self.assertIn("function employeeLanguageChip(employee)", enhancements)
         self.assertIn("${employeeNameLink(employee)}", enhancements)
         for marker in [
             ".employee-name-link",
+            ".employee-identity-meta",
+            ".employee-language-chip",
             ".employee-profile-modal",
             ".employee-language",
             ".employee-current-assignment",
