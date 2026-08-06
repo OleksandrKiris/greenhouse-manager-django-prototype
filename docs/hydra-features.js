@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "2026.08.06.6";
+  const VERSION = "2026.08.06.7";
   const STORAGE_KEY = "greenhouse-hydra-settings-v1";
   const PENDING_KEY = "greenhouse-offline-queue-v1";
   const languages = {
@@ -11,7 +11,7 @@
     en: { label: "English", locale: "en-US" },
   };
   const screenLabels = {
-    pl: { dashboard: "Podsumowanie", planning: "Plan zmiany", attendance: "Lista obecności", tasks: "Prace", productivity: "Wydajność", team: "Pracownicy", crop: "Mapa obserwacji", tickets: "Zgłoszenia", materials: "Materiały", reports: "Raporty" },
+    pl: { dashboard: "Podsumowanie", planning: "Plan zmiany", attendance: "Lista obecności", tasks: "Prace", productivity: "Wyniki", team: "Pracownicy", crop: "Problemy w szklarni", tickets: "Zgłoszenia", materials: "Materiały i braki", reports: "Podsumowanie zmiany" },
     ua: { dashboard: "Підсумок", planning: "План зміни", attendance: "Облік присутності", tasks: "Роботи", productivity: "Продуктивність", team: "Працівники", crop: "Карта спостережень", tickets: "Заявки", materials: "Матеріали", reports: "Звіти" },
     ru: { dashboard: "Итоги", planning: "План смены", attendance: "Учёт присутствия", tasks: "Работы", productivity: "Производительность", team: "Сотрудники", crop: "Карта наблюдений", tickets: "Заявки", materials: "Материалы", reports: "Отчёты" },
     en: { dashboard: "Summary", planning: "Shift plan", attendance: "Attendance", tasks: "Work", productivity: "Productivity", team: "Employees", crop: "Observation map", tickets: "Tickets", materials: "Materials", reports: "Reports" },
@@ -177,7 +177,7 @@
       const submit = context.app.querySelector(".login-submit");
       if (heading) heading.textContent = settings.language === "pl" ? "Zaloguj się do wybranej roli" : settings.language === "ua" ? "Увійдіть з вибраною роллю" : settings.language === "ru" ? "Войдите с выбранной ролью" : "Sign in with a selected role";
       if (lead) lead.textContent = settings.language === "pl" ? "Każda rola widzi tylko swój zakres ekranów i decyzji." : settings.language === "ua" ? "Кожна роль бачить лише дозволені екрани та рішення." : settings.language === "ru" ? "Каждая роль видит только разрешённые экраны и решения." : "Each role only sees its permitted screens and decisions.";
-      if (submit) submit.innerHTML = `${settings.language === "pl" ? "Otwórz makietę" : settings.language === "ua" ? "Відкрити макет" : settings.language === "ru" ? "Открыть макет" : "Open prototype"} <b>→</b>`;
+      if (submit) submit.innerHTML = `${settings.language === "pl" ? "Zaloguj się" : settings.language === "ua" ? "Увійти" : settings.language === "ru" ? "Войти" : "Sign in"} <b>→</b>`;
     }
   }
 

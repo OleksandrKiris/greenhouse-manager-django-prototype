@@ -7,12 +7,12 @@
     planning: "Plan zmiany",
     attendance: "Lista obecności",
     tasks: "Prace",
-    productivity: "Wydajność",
+    productivity: "Wyniki",
     team: "Pracownicy",
-    crop: "Mapa obserwacji",
+    crop: "Problemy w szklarni",
     tickets: "Zgłoszenia",
-    materials: "Materiały",
-    reports: "Raporty",
+    materials: "Materiały i braki",
+    reports: "Podsumowanie zmiany",
   };
   const navigationGroups = [
     ["START", ["dashboard"]],
@@ -310,7 +310,7 @@
     const totalPaid = employees.reduce((sum, employee) => sum + breakSummary(employee).paid, 0);
     const totalDeducted = employees.reduce((sum, employee) => sum + breakSummary(employee).deducted, 0);
     const totalWork = employees.reduce((sum, employee) => sum + workedMinutes(employee), 0);
-    roster.insertAdjacentHTML("beforebegin", `<section class="ux-attendance-command surface"><div class="ux-command-copy"><span class="kicker">SZYBKA OBSADA</span><h3>Najpierw potwierdź brygadę, później popraw wyjątki</h3><p>Jedno działanie ustawia obecność całej widocznej brygady. Indywidualne godziny i przerwy pozostają dostępne po rozwinięciu pracownika.</p></div><div class="ux-attendance-metrics"><span><small>Do sprawdzenia</small><b class="${exceptions ? "danger" : ""}">${exceptions}</b></span><span><small>Czas netto</small><b>${formatMinutes(totalWork)}</b></span><span><small>Płatna przerwa</small><b>${formatMinutes(totalPaid)}</b></span><span><small>Odliczane</small><b>${formatMinutes(totalDeducted)}</b></span></div><div class="ux-command-actions"><button class="secondary ${ux.attendanceExceptions ? "active" : ""}" data-ux-action="attendance-exceptions">${ux.attendanceExceptions ? "Pokaż wszystkich" : `Tylko wyjątki (${exceptions})`}</button><button class="primary" data-ux-action="attendance-all-present">✓ Cała brygada obecna</button></div><div class="ux-paid-rule"><i>15</i><span><b>Pierwsze 15 minut pierwszej przerwy jest płatne</b><small>Od czasu pracy odejmowana jest dopiero pozostała część pierwszej przerwy oraz cała druga przerwa.</small></span></div></section>`);
+    roster.insertAdjacentHTML("beforebegin", `<section class="ux-attendance-command surface"><div class="ux-command-copy"><span class="kicker">OBECNOŚĆ</span><h3>Oznacz całą brygadę i popraw tylko wyjątki</h3><p><b class="${exceptions ? "danger" : ""}">${exceptions} do sprawdzenia.</b> Godziny i przerwy zmienisz po rozwinięciu pracownika.</p></div><div class="ux-command-actions"><button class="secondary ${ux.attendanceExceptions ? "active" : ""}" data-ux-action="attendance-exceptions">${ux.attendanceExceptions ? "Pokaż wszystkich" : `Tylko wyjątki (${exceptions})`}</button><button class="primary" data-ux-action="attendance-all-present">✓ Oznacz wszystkich jako obecnych</button></div><details class="ux-attendance-summary"><summary>Podsumowanie godzin</summary><div class="ux-attendance-metrics"><span><small>Czas netto</small><b>${formatMinutes(totalWork)}</b></span><span><small>Płatna przerwa</small><b>${formatMinutes(totalPaid)}</b></span><span><small>Odliczane</small><b>${formatMinutes(totalDeducted)}</b></span></div></details><div class="ux-paid-rule"><i>15</i><span><b>Pierwsze 15 minut pierwszej przerwy jest płatne</b><small>Od czasu pracy odejmowana jest dopiero pozostała część pierwszej przerwy oraz cała druga przerwa.</small></span></div></section>`);
     applyAttendanceExceptionFilter();
   }
 
@@ -394,7 +394,7 @@
       form.append(fieldset);
     });
     originalActions?.remove();
-    form.insertAdjacentHTML("beforeend", `<div class="ux-wizard-actions"><button type="button" class="ghost" data-action="close-modal">Anuluj</button><span></span><button type="button" class="secondary" data-ux-action="ticket-prev">← Wstecz</button><button type="button" class="primary" data-ux-action="ticket-next">Dalej →</button><button type="submit" class="primary" data-ux-ticket-submit>Utwórz zgłoszenie</button></div>`);
+    form.insertAdjacentHTML("beforeend", `<div class="ux-wizard-actions"><button type="button" class="ghost" data-action="close-modal">Anuluj</button><span></span><button type="button" class="secondary" data-ux-action="ticket-prev">← Wstecz</button><button type="button" class="primary" data-ux-action="ticket-next">Dalej →</button><button type="submit" class="primary" data-ux-ticket-submit>Wyślij zgłoszenie</button></div>`);
     showTicketStep(Math.min(2, ux.ticketStep));
   }
 
@@ -444,6 +444,7 @@
   }
 
   function handleAttendanceAllPresent() {
+    context.rememberUndo?.("oznaczenie całej brygady");
     context.state.employees.forEach((employee) => {
       employee.status = "Obecny";
       if (!/^\d{2}:\d{2}$/.test(employee.start || "")) employee.start = "06:00";

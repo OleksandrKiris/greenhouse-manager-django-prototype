@@ -533,3 +533,30 @@ class PrototypePageTests(SimpleTestCase):
             ".employee-permission-note",
         ]:
             self.assertIn(marker, styles)
+
+    def test_daily_actions_are_plain_language_fast_and_reversible(self):
+        static_dir = Path(__file__).parent / "static" / "prototype"
+        app_script = (static_dir / "app.js").read_text(encoding="utf-8")
+        ux_script = (static_dir / "ux-v3.js").read_text(encoding="utf-8")
+        styles = (static_dir / "visual-system-v4.css").read_text(encoding="utf-8")
+        for marker in [
+            "function rememberUndo(label)",
+            "function restoreUndo()",
+            'data-action="undo-last"',
+            'action === "start-plan"',
+            "Rozpocznij pracę",
+            "Zaloguj się",
+            "Problemy w szklarni",
+            "Materiały i braki",
+            "Podsumowanie zmiany",
+        ]:
+            self.assertIn(marker, app_script)
+        for marker in [
+            "Oznacz całą brygadę i popraw tylko wyjątki",
+            "Oznacz wszystkich jako obecnych",
+            "Podsumowanie godzin",
+            'context.rememberUndo?.("oznaczenie całej brygady")',
+            "Wyślij zgłoszenie",
+        ]:
+            self.assertIn(marker, ux_script)
+        self.assertIn(".visual-system-v4 .toast > button", styles)

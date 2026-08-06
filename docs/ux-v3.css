@@ -80,7 +80,7 @@
   margin-bottom: 14px;
   padding: 18px;
   display: grid;
-  grid-template-columns: minmax(260px, 1.25fr) minmax(360px, 1.4fr) auto;
+  grid-template-columns: minmax(260px, 1.25fr) minmax(300px, auto);
   gap: 16px;
   align-items: center;
   overflow: hidden;
@@ -95,10 +95,27 @@
 }
 
 .ux-command-copy p { margin: 0; color: var(--v2-muted); font-size: 11px; line-height: 1.5; }
+.ux-command-copy p b { color: var(--v2-green); }
+.ux-command-copy p b.danger { color: var(--v2-red); }
+
+.ux-attendance-summary {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--v2-line);
+}
+
+.ux-attendance-summary > summary {
+  width: max-content;
+  padding: 10px 0 4px;
+  color: var(--v2-muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+}
 
 .ux-attendance-metrics {
+  margin-top: 8px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 1px;
   overflow: hidden;
   background: var(--v2-line);
@@ -348,7 +365,7 @@
   .operations-context .context-search { grid-column: 1 / -1; }
 
   .ux-attendance-command { grid-template-columns: 1fr; }
-  .ux-attendance-metrics { grid-template-columns: repeat(4, 1fr); }
+  .ux-attendance-metrics { grid-template-columns: repeat(3, 1fr); }
   .ux-command-actions { grid-column: auto; grid-template-columns: 1fr 1fr; }
   .ux-paid-rule { grid-column: auto; }
 

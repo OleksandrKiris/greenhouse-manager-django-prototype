@@ -133,12 +133,12 @@
     planning: { icon: "▣", title: "Plan zmiany", purpose: "Wyłącznie przygotowanie, obsada i publikacja planu dla obiektu.", owns: ["harmonogram", "potrzebna obsada", "norma i instrukcja", "publikacja"] },
     attendance: { icon: "✓", title: "Lista obecności", purpose: "Wyłącznie status obecności, czas pracy, przerwy i wyjątki.", owns: ["status osoby", "start i koniec", "1 lub 2 przerwy", "czas netto"] },
     tasks: { icon: "↗", title: "Prace", purpose: "Wyłącznie bieżąca realizacja zadań przez brygady.", owns: ["miejsce pracy", "ludzie i brygadzista", "wózek", "postęp i blokady"] },
-    productivity: { icon: "≈", title: "Wydajność", purpose: "Wyłącznie wyniki osobowe i zespołowe liczone w zgodnych jednostkach.", owns: ["kg/h", "rz./h", "norma", "trend i wsparcie"] },
+    productivity: { icon: "≈", title: "Wyniki", purpose: "Wyłącznie wyniki osobowe i zespołowe liczone w zgodnych jednostkach.", owns: ["kg/h", "rz./h", "norma", "trend i wsparcie"] },
     team: { icon: "♙", title: "Pracownicy", purpose: "Wyłącznie dane potrzebne do doboru i rozwoju pracownika.", owns: ["dostępność", "kompetencje", "dokumenty", "bilans godzin"] },
-    crop: { icon: "◎", title: "Mapa obserwacji", purpose: "Wyłącznie obserwacje upraw i ich dokładna lokalizacja.", owns: ["etap i nawa", "strona łącznika", "wjazd i strona", "ocena i działanie"] },
+    crop: { icon: "◎", title: "Problemy w szklarni", purpose: "Wyłącznie problemy upraw i ich dokładna lokalizacja.", owns: ["etap i nawa", "strona łącznika", "wjazd i strona", "ocena i działanie"] },
     tickets: { icon: "⌘", title: "Zgłoszenia", purpose: "Wyłącznie problemy techniczne, odpowiedzialność, SLA i historia.", owns: ["źródło zgłoszenia", "lokalizacja", "właściciel", "status i historia"] },
-    materials: { icon: "◇", title: "Materiały", purpose: "Wyłącznie stany, rezerwacje, wydania i zapotrzebowania.", owns: ["stan i minimum", "rezerwacja", "wydanie do pracy", "zamówienie"] },
-    reports: { icon: "▦", title: "Raporty", purpose: "Wyłącznie podsumowanie zatwierdzonych danych z zakresu roli.", owns: ["kompletność", "wynik zmiany", "wyjątki", "akceptacja i eksport"] },
+    materials: { icon: "◇", title: "Materiały i braki", purpose: "Wyłącznie stany, rezerwacje, wydania i zapotrzebowania.", owns: ["stan i minimum", "rezerwacja", "wydanie do pracy", "zamówienie"] },
+    reports: { icon: "▦", title: "Podsumowanie zmiany", purpose: "Wyłącznie podsumowanie zatwierdzonych danych z zakresu roli.", owns: ["kompletność", "wynik zmiany", "wyjątki", "akceptacja i eksport"] },
   };
 
   const largeListDefinitions = {
@@ -1457,6 +1457,7 @@
       const people = resources.availablePeople.slice(0, plan.need).map((employee) => employee.name);
       if (!people.length) return notify("Brak wolnych pracowników — najpierw przenieś grupę w module Prace");
       const freeCart = Array.from({ length: 12 }, (_, index) => `WZ-${String(index + 1).padStart(2, "0")}`).find((cart) => !resources.cartAssignments.has(cart)) || "—";
+      context.rememberUndo?.("rozpoczęcie pozycji planu");
       const task = {
         id: Date.now(),
         planId: plan.id,
